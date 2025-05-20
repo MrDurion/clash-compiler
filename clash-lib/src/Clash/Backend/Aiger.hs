@@ -8,14 +8,15 @@ import Clash.Netlist.Types hiding (Usage)
 import Clash.Util
 import Control.Monad.State (State)
 import Data.HashSet (HashSet)
-import Data.Monoid (Ap)
+import Data.Monoid (Ap (..))
 import qualified Data.Text.Lazy as LT
-import Data.Text.Prettyprint.Doc.Extra (Doc)
+import Data.Text.Prettyprint.Doc.Extra (Doc )
 import qualified System.FilePath
+import Prettyprinter (Pretty(..))
 
 data AigerState = AigerState
-  {
-  }
+  {}
+
 
 instance HasIdentifierSet AigerState where
   identifierSet = undefined
@@ -23,9 +24,13 @@ instance HasIdentifierSet AigerState where
 instance HasUsageMap AigerState where
   usageMap = undefined
 
+type AigerM = Ap (State AigerState)
+
 instance Backend AigerState where
   -- \| Initial state for state monad
-  initBackend _opts = AigerState {}
+  initBackend _opts =
+    AigerState
+      {}
 
   -- \| What HDL is the backend generating
   hdlKind :: AigerState -> HDL
@@ -33,8 +38,9 @@ instance Backend AigerState where
 
   -- \| Location for the primitive definitions
   primDirs :: AigerState -> IO [FilePath]
-  primDirs = const $ do root <- primsRoot
-                        return [ root System.FilePath.</> "aiger"]
+  primDirs = const $ do
+    root <- primsRoot
+    return [root System.FilePath.</> "aiger"]
 
   -- \| Name of backend, used for directory to put output files in. Should be
   --   constant function / ignore argument.
@@ -49,17 +55,20 @@ instance Backend AigerState where
   extractTypes :: AigerState -> HashSet HWType
   extractTypes = undefined
 
+  -- FIXME
   -- \| Generate HDL for a Netlist component
-  genHDL :: ClashOpts -> ModName -> SrcSpan -> IdentifierSet -> UsageMap -> Component -> Ap (State AigerState) ((String, Doc), [(String, Doc)])
-  genHDL = undefined
+  genHDL :: ClashOpts -> ModName -> SrcSpan -> IdentifierSet -> UsageMap -> Component -> AigerM ((String, Doc), [(String, Doc)])
+  genHDL = genAIGER
 
+  -- FIXME
   -- \| Generate a HDL package containing type definitions for the given HWTypes
-  mkTyPackage :: ModName -> [HWType] -> Ap (State AigerState) [(String, Doc)]
-  mkTyPackage = undefined
+  mkTyPackage :: ModName -> [HWType] -> AigerM [(String, Doc)]
+  mkTyPackage _ _ = pure []
 
+  -- FIXME
   -- \| Convert a Netlist HWType to a target HDL type
-  hdlType :: Usage -> HWType -> Ap (State AigerState) Doc
-  hdlType = undefined
+  hdlType :: Usage -> HWType -> AigerM Doc
+  hdlType _ _ = pure $ pretty "hdlType stuff here"
 
   -- FIXME define the types for each HWType in AIGER
   -- \| Query what kind of type a given HDL type is
@@ -67,19 +76,19 @@ instance Backend AigerState where
   hdlHWTypeKind _ = pure PrimitiveType
 
   -- \| Convert a Netlist HWType to an HDL error value for that type
-  hdlTypeErrValue :: HWType -> Ap (State AigerState) Doc
+  hdlTypeErrValue :: HWType -> AigerM Doc
   hdlTypeErrValue = undefined
 
   -- \| Convert a Netlist HWType to the root of a target HDL type
-  hdlTypeMark :: HWType -> Ap (State AigerState) Doc
+  hdlTypeMark :: HWType -> AigerM Doc
   hdlTypeMark = undefined
 
   -- \| Create a record selector
-  hdlRecSel :: HWType -> Int -> Ap (State AigerState) Doc
+  hdlRecSel :: HWType -> Int -> AigerM Doc
   hdlRecSel = undefined
 
   -- \| Create a signal declaration from an identifier (Text) and Netlist HWType
-  hdlSig :: LT.Text -> HWType -> Ap (State AigerState) Doc
+  hdlSig :: LT.Text -> HWType -> AigerM Doc
   hdlSig = undefined
 
   -- \| Create a generative block AigerStatement marker
@@ -87,7 +96,7 @@ instance Backend AigerState where
   genStmt = undefined
 
   -- \| Turn a Netlist Declaration to a HDL concurrent block
-  inst :: Declaration -> Ap (State AigerState) (Maybe Doc)
+  inst :: Declaration -> AigerM (Maybe Doc)
   inst = undefined
 
   -- \| Turn a Netlist expression into a HDL expression
@@ -96,7 +105,7 @@ instance Backend AigerState where
     -- \^ Enclose in parentheses?
     Expr ->
     -- \^ Expr to convert
-    Ap (State AigerState) Doc
+    AigerM Doc
   expr = undefined
 
   -- \| Bit-width of Int,Word,Integer
@@ -104,11 +113,11 @@ instance Backend AigerState where
   iwWidth = undefined
 
   -- \| Convert to a bit-vector
-  toBV :: HWType -> LT.Text -> Ap (State AigerState) Doc
+  toBV :: HWType -> LT.Text -> AigerM Doc
   toBV = undefined
 
   -- \| Convert from a bit-vector
-  fromBV :: HWType -> LT.Text -> Ap (State AigerState) Doc
+  fromBV :: HWType -> LT.Text -> AigerM Doc
   fromBV = undefined
 
   -- \| Synthesis tool we're generating HDL for
@@ -136,10 +145,12 @@ instance Backend AigerState where
   getSrcSpan = undefined
 
   -- \| Block of declarations
-  blockDecl :: Identifier -> [Declaration] -> Ap (State AigerState) Doc
+  blockDecl :: Identifier -> [Declaration] -> AigerM Doc
   blockDecl = undefined
+
   addIncludes :: [(String, Doc)] -> State AigerState ()
   addIncludes = undefined
+
   addLibraries :: [LT.Text] -> State AigerState ()
   addLibraries = undefined
 
@@ -149,30 +160,48 @@ instance Backend AigerState where
   addAndSetData :: FilePath -> State AigerState String
   addAndSetData = undefined
 
+  -- FIXME
   getDataFiles :: State AigerState [(String, FilePath)]
-  getDataFiles = undefined
+  getDataFiles = pure []
 
   addMemoryDataFile :: (String, String) -> State AigerState ()
   addMemoryDataFile = undefined
 
+  -- FIXME
   getMemoryDataFiles :: State AigerState [(String, String)]
-  getMemoryDataFiles = undefined
+  getMemoryDataFiles = pure []
 
   ifThenElseExpr :: AigerState -> Bool
   ifThenElseExpr = undefined
 
+  -- FIXME
   -- \| Whether -fclash-aggressive-x-optimization-blackboxes was set
   aggressiveXOptBB :: State AigerState AggressiveXOptBB
-  aggressiveXOptBB = undefined
+  aggressiveXOptBB = pure $ AggressiveXOptBB False
 
+  -- FIXME
   -- \| Whether -fclash-no-render-enums was set
   renderEnums :: State AigerState RenderEnums
-  renderEnums = undefined
+  renderEnums = pure $ RenderEnums False
 
+  -- FIXME
   -- \| All the domain configurations of design
   domainConfigurations :: State AigerState DomainMap
-  domainConfigurations = undefined
+  domainConfigurations = pure $ emptyDomainMap
 
   -- \| Set the domain configurations
   setDomainConfigurations :: DomainMap -> AigerState -> AigerState
   setDomainConfigurations = undefined
+
+-- FIXME
+genAIGER ::
+  ClashOpts ->
+  ModName ->
+  SrcSpan ->
+  IdentifierSet ->
+  UsageMap ->
+  Component ->
+  AigerM ((String, Doc), [(String, Doc)])
+genAIGER _ _ _ _ _ c= do
+  return (("helloThere", pretty $ show c),[])
+

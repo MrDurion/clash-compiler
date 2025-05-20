@@ -44,6 +44,7 @@ cabal.config
 /vhdl
 /verilog
 /systemverilog
+/aiger
 
 # Temporary directory for Clash testsuite
 /.clash-test-tmp
