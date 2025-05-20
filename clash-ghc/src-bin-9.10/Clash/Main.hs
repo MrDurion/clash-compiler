@@ -116,6 +116,7 @@ import           Clash.Backend (Backend)
 import           Clash.Backend.SystemVerilog (SystemVerilogState)
 import           Clash.Backend.VHDL    (VHDLState)
 import           Clash.Backend.Verilog (VerilogState)
+import           Clash.Backend.Aiger (AigerState)
 import           Clash.Driver.Types
   (ClashOpts (..), defClashOpts)
 import           Clash.GHC.ClashFlags
@@ -226,6 +227,7 @@ main' postLoadMode units dflags0 args flagWarnings startAction clashOpts = do
                DoVHDL          -> (CompManager, noBackend,     NoLink)
                DoVerilog       -> (CompManager, noBackend,     NoLink)
                DoSystemVerilog -> (CompManager, noBackend,     NoLink)
+               DoAiger         -> (CompManager, noBackend,     NoLink)
                _               -> (OneShot,     dflt_backend, LinkBinary)
 
   let dflags1 = dflags0{ ghcMode   = mode,
@@ -351,6 +353,7 @@ main' postLoadMode units dflags0 args flagWarnings startAction clashOpts = do
        DoVHDL                 -> clash makeVHDL
        DoVerilog              -> clash makeVerilog
        DoSystemVerilog        -> clash makeSystemVerilog
+       DoAiger                -> clash makeAIGER
 
   liftIO $ dumpFinalStats logger
 
@@ -545,10 +548,11 @@ data PostLoadMode
   | DoVHDL                  -- ghc --vhdl
   | DoVerilog               -- ghc --verilog
   | DoSystemVerilog         -- ghc --systemverilog
+  | DoAiger                 -- ghc --aiger
 
 doMkDependHSMode, doMakeMode, doInteractiveMode, doRunMode,
   doAbiHashMode, showUnitsMode, doVHDLMode, doVerilogMode,
-  doSystemVerilogMode :: Mode
+  doSystemVerilogMode, doAigerMode :: Mode
 doMkDependHSMode = mkPostLoadMode DoMkDependHS
 doMakeMode = mkPostLoadMode DoMake
 doInteractiveMode = mkPostLoadMode DoInteractive
@@ -558,6 +562,7 @@ showUnitsMode = mkPostLoadMode ShowPackages
 doVHDLMode = mkPostLoadMode DoVHDL
 doVerilogMode = mkPostLoadMode DoVerilog
 doSystemVerilogMode = mkPostLoadMode DoSystemVerilog
+doAigerMode= mkPostLoadMode DoAigerMode
 
 showInterfaceMode :: FilePath -> Mode
 showInterfaceMode fp = mkPostLoadMode (ShowInterface fp)
@@ -612,6 +617,7 @@ needsInputsMode DoMake          = True
 needsInputsMode DoVHDL          = True
 needsInputsMode DoVerilog       = True
 needsInputsMode DoSystemVerilog = True
+needsInputsMode DoAiger         = True
 needsInputsMode _               = False
 
 -- True if we are going to attempt to link in this mode.
@@ -632,6 +638,7 @@ isCompManagerMode (DoEval _)    = True
 isCompManagerMode DoVHDL        = True
 isCompManagerMode DoVerilog     = True
 isCompManagerMode DoSystemVerilog = True
+isCompManagerMode DoAiger       = True
 isCompManagerMode _             = False
 
 -- -----------------------------------------------------------------------------
@@ -719,6 +726,7 @@ mode_flags =
   , defFlag "-frontend"    (SepArg   (\s -> setMode (doFrontendMode s) "-frontend"))
   , defFlag "-vhdl"        (PassFlag (setMode doVHDLMode))
   , defFlag "-verilog"     (PassFlag (setMode doVerilogMode))
+  , defFlag "-aiger"       (PassFlag (setMode doAigerMode))
   , defFlag "-systemverilog" (PassFlag (setMode doSystemVerilogMode))
   ]
 
@@ -1223,6 +1231,9 @@ makeVHDL = makeHDL' (Proxy @VHDLState)
 
 makeVerilog :: Ghc () -> IORef ClashOpts -> [(String, Maybe Phase)] -> Ghc ()
 makeVerilog = makeHDL' (Proxy @VerilogState)
+
+makeAIGER :: Ghc () -> IORef ClashOpts -> [(String, Maybe Phase)] -> Ghc ()
+makeAIGER = makeHDL' (Proxy @AigerState)
 
 makeSystemVerilog :: Ghc () -> IORef ClashOpts -> [(String, Maybe Phase)] -> Ghc ()
 makeSystemVerilog = makeHDL' (Proxy @SystemVerilogState)
