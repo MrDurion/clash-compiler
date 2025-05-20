@@ -257,6 +257,7 @@ Library
                       Clash.Netlist.Id.Internal
                       Clash.Netlist.Id.SystemVerilog
                       Clash.Netlist.Id.Verilog
+                      Clash.Netlist.Id.AIGER
                       Clash.Netlist.Id.VHDL
                       Clash.Netlist.Types
                       Clash.Netlist.Util

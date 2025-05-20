@@ -38,6 +38,7 @@ import qualified Data.HashSet as HashSet
 import qualified Clash.Netlist.Id.SystemVerilog as SystemVerilog
 import qualified Clash.Netlist.Id.Verilog as Verilog
 import qualified Clash.Netlist.Id.VHDL as VHDL
+import qualified Clash.Netlist.Id.AIGER as AIGER
 import qualified Clash.Netlist.Id.Common as Common
 
 -- | Return identifier with highest extension for given identifier. See
@@ -114,6 +115,7 @@ addRaw# is0 id0 =
     VHDL -> VHDL.unextend
     Verilog -> Verilog.unextend
     SystemVerilog -> SystemVerilog.unextend
+    AIGER -> AIGER.unextend
 
 -- | Non-monadic, internal version of 'make'
 make# :: HasCallStack => IdentifierSet -> Text -> (IdentifierSet, Identifier)
@@ -185,6 +187,7 @@ toText# (UniqueIdentifier{..}) =
     VHDL -> VHDL.toText i_idType basicId
     Verilog -> Verilog.toText i_idType basicId
     SystemVerilog -> SystemVerilog.toText i_idType basicId
+    AIGER -> AIGER.toText i_idType basicId
  where
   exts = map showt (reverse i_extensionsRev)
   basicId = Text.intercalate "_" (i_baseName : exts)
@@ -194,12 +197,14 @@ isBasic# :: HDL -> Text -> Bool
 isBasic# VHDL = VHDL.parseBasic
 isBasic# Verilog = Verilog.parseBasic
 isBasic# SystemVerilog = SystemVerilog.parseBasic
+isBasic# AIGER = AIGER.parseBasic
 
 -- | Is given string a valid extended identifier in given HDL?
 isExtended# :: HDL -> Text -> Bool
 isExtended# VHDL = VHDL.parseExtended
 isExtended# Verilog = Verilog.parseExtended
 isExtended# SystemVerilog = SystemVerilog.parseExtended
+isExtended# AIGER = AIGER.parseExtended
 
 -- | Convert given string to ASCII. Retains all printable ASCII. All other
 -- characters are thrown out.
@@ -248,6 +253,7 @@ toBasicId# hdl lw id0 =
     VHDL -> VHDL.toBasic id1
     Verilog -> Verilog.toBasic id1
     SystemVerilog -> SystemVerilog.toBasic id1
+    AIGER -> AIGER.toBasic id1
  where
   id1 = case lw of {PreserveCase -> id0; ToLower -> Text.toLower id0}
 

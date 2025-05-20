@@ -562,7 +562,7 @@ showUnitsMode = mkPostLoadMode ShowPackages
 doVHDLMode = mkPostLoadMode DoVHDL
 doVerilogMode = mkPostLoadMode DoVerilog
 doSystemVerilogMode = mkPostLoadMode DoSystemVerilog
-doAigerMode= mkPostLoadMode DoAigerMode
+doAigerMode= mkPostLoadMode DoAiger
 
 showInterfaceMode :: FilePath -> Mode
 showInterfaceMode fp = mkPostLoadMode (ShowInterface fp)

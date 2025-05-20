@@ -11,6 +11,7 @@ import Data.HashSet (HashSet)
 import Data.Monoid (Ap)
 import qualified Data.Text.Lazy as LT
 import Data.Text.Prettyprint.Doc.Extra (Doc)
+import qualified System.FilePath
 
 data AigerState = AigerState
   {
@@ -32,7 +33,8 @@ instance Backend AigerState where
 
   -- \| Location for the primitive definitions
   primDirs :: AigerState -> IO [FilePath]
-  primDirs = undefined
+  primDirs = const $ do root <- primsRoot
+                        return [ root System.FilePath.</> "aiger"]
 
   -- \| Name of backend, used for directory to put output files in. Should be
   --   constant function / ignore argument.
@@ -59,9 +61,10 @@ instance Backend AigerState where
   hdlType :: Usage -> HWType -> Ap (State AigerState) Doc
   hdlType = undefined
 
+  -- FIXME define the types for each HWType in AIGER
   -- \| Query what kind of type a given HDL type is
   hdlHWTypeKind :: HWType -> State AigerState HWKind
-  hdlHWTypeKind = undefined
+  hdlHWTypeKind _ = pure PrimitiveType
 
   -- \| Convert a Netlist HWType to an HDL error value for that type
   hdlTypeErrValue :: HWType -> Ap (State AigerState) Doc

@@ -1033,6 +1033,8 @@ andExpr nm a b = do
       VHDL          -> aIdent <> " and " <> bIdent
       Verilog       -> aIdent <> " && " <> bIdent
       SystemVerilog -> aIdent <> " && " <> bIdent
+      -- FIXME correct thing here
+      AIGER -> aIdent <> " && " <> bIdent
   assign nm $ TExpr Bool (Identifier (Id.unsafeMake andTxt) Nothing)
 
 -- | Massage a reset to work as active-high reset.
@@ -1081,6 +1083,8 @@ notExpr nm aExpr = do
     VHDL          -> "not " <> aIdent
     Verilog       -> "! " <> aIdent
     SystemVerilog -> "! " <> aIdent
+    -- FIXME correct stuff here
+    AIGER -> "! " <> aIdent
   assign nm $ TExpr Bit (Identifier (Id.unsafeMake notTxt) Nothing)
 
 -- | Creates a BV that produces the following vhdl:

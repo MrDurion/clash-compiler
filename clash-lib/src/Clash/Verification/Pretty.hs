@@ -77,6 +77,8 @@ pslEdge Verilog Rising clkId = "posedge " <> clkId
 pslEdge Verilog Falling clkId = "negedge " <> clkId
 pslEdge VHDL Rising clkId = "rising_edge(" <> clkId <> ")"
 pslEdge VHDL Falling clkId = "falling_edge(" <> clkId <> ")"
+-- FIXME plsEdge implementation for AIGER
+pslEdge AIGER _activeEdge _clkId = "TODO IMPLEMENT LATER"
 
 -- | Taken from IEEE Std 1850-2010a, Annex B.1, p149
 symbol :: HDL -> Symbol -> Text
@@ -95,6 +97,20 @@ symbol Verilog = \case
   Equals    -> "=="
 
 symbol VHDL = \case
+  TImpliesOverlapping -> "|->"
+  TImplies  -> "|=>"
+  Implies   -> " -> "
+  BiImplies -> " <-> "
+  Not       -> "not"
+  And       -> " and "
+  Or        -> " or "
+  To        -> " to "
+  Assign    -> "<="
+  Is        -> "is"
+  Equals    -> "="
+
+-- FIXME sybols for aiger 
+symbol AIGER = \case
   TImpliesOverlapping -> "|->"
   TImplies  -> "|=>"
   Implies   -> " -> "

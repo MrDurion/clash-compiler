@@ -186,6 +186,7 @@ data HDL
   = SystemVerilog
   | Verilog
   | VHDL
+  | AIGER
   deriving (Eq, Show, Read, Data, Generic, NFData, Hashable, Enum, Bounded)
 
 -- | The 'Primitive' constructor instructs the clash compiler to look for primitive
