@@ -1,6 +1,6 @@
-module Clash.Backend.Aiger () where
+module Clash.Backend.Aiger (AigerState) where
 
-import Clash.Annotations.Primitive (HDL)
+import Clash.Annotations.Primitive (HDL (..))
 import Clash.Backend
 import Clash.Driver.Types (ClashOpts)
 import Clash.Netlist.BlackBox.Types (HdlSyn)
@@ -24,68 +24,67 @@ instance HasUsageMap AigerState where
 
 instance Backend AigerState where
   -- \| Initial state for state monad
-  initBackend :: ClashOpts -> state
-  initBackend = undefined
+  initBackend _opts = AigerState {}
 
   -- \| What HDL is the backend generating
-  hdlKind :: state -> HDL
-  hdlKind = undefined
+  hdlKind :: AigerState -> HDL
+  hdlKind = const AIGER
 
   -- \| Location for the primitive definitions
-  primDirs :: state -> IO [FilePath]
+  primDirs :: AigerState -> IO [FilePath]
   primDirs = undefined
 
   -- \| Name of backend, used for directory to put output files in. Should be
   --   constant function / ignore argument.
-  name :: state -> String
-  name = undefined
+  name :: AigerState -> String
+  name = const "aiger"
 
   -- \| File extension for target langauge
-  extension :: state -> String
-  extension = undefined
+  extension :: AigerState -> String
+  extension = const "aig"
 
-  -- \| Get the set of types out of state
-  extractTypes :: state -> HashSet HWType
+  -- \| Get the set of types out of AigerState
+  extractTypes :: AigerState -> HashSet HWType
   extractTypes = undefined
 
   -- \| Generate HDL for a Netlist component
-  genHDL :: ClashOpts -> ModName -> SrcSpan -> IdentifierSet -> UsageMap -> Component -> Ap (State state) ((String, Doc), [(String, Doc)])
+  genHDL :: ClashOpts -> ModName -> SrcSpan -> IdentifierSet -> UsageMap -> Component -> Ap (State AigerState) ((String, Doc), [(String, Doc)])
   genHDL = undefined
 
   -- \| Generate a HDL package containing type definitions for the given HWTypes
-  mkTyPackage :: ModName -> [HWType] -> Ap (State state) [(String, Doc)]
+  mkTyPackage :: ModName -> [HWType] -> Ap (State AigerState) [(String, Doc)]
   mkTyPackage = undefined
 
   -- \| Convert a Netlist HWType to a target HDL type
-  hdlType :: Usage -> HWType -> Ap (State state) Doc
+  hdlType :: Usage -> HWType -> Ap (State AigerState) Doc
   hdlType = undefined
 
   -- \| Query what kind of type a given HDL type is
-  hdlHWTypeKind :: HWType -> State state HWKind
+  hdlHWTypeKind :: HWType -> State AigerState HWKind
   hdlHWTypeKind = undefined
 
   -- \| Convert a Netlist HWType to an HDL error value for that type
-  hdlTypeErrValue :: HWType -> Ap (State state) Doc
+  hdlTypeErrValue :: HWType -> Ap (State AigerState) Doc
   hdlTypeErrValue = undefined
 
   -- \| Convert a Netlist HWType to the root of a target HDL type
-  hdlTypeMark :: HWType -> Ap (State state) Doc
+  hdlTypeMark :: HWType -> Ap (State AigerState) Doc
   hdlTypeMark = undefined
 
   -- \| Create a record selector
-  hdlRecSel :: HWType -> Int -> Ap (State state) Doc
+  hdlRecSel :: HWType -> Int -> Ap (State AigerState) Doc
   hdlRecSel = undefined
 
   -- \| Create a signal declaration from an identifier (Text) and Netlist HWType
-  hdlSig :: LT.Text -> HWType -> Ap (State state) Doc
+  hdlSig :: LT.Text -> HWType -> Ap (State AigerState) Doc
   hdlSig = undefined
 
-  -- \| Create a generative block statement marker
-  genStmt :: Bool -> State state Doc
+  -- \| Create a generative block AigerStatement marker
+  genStmt :: Bool -> State AigerState Doc
   genStmt = undefined
 
   -- \| Turn a Netlist Declaration to a HDL concurrent block
-  inst :: Declaration -> Ap (State state) (Maybe Doc)
+  inst :: Declaration -> Ap (State AigerState) (Maybe Doc)
   inst = undefined
 
   -- \| Turn a Netlist expression into a HDL expression
@@ -94,83 +93,83 @@ instance Backend AigerState where
     -- \^ Enclose in parentheses?
     Expr ->
     -- \^ Expr to convert
-    Ap (State state) Doc
+    Ap (State AigerState) Doc
   expr = undefined
 
   -- \| Bit-width of Int,Word,Integer
-  iwWidth :: State state Int
+  iwWidth :: State AigerState Int
   iwWidth = undefined
 
   -- \| Convert to a bit-vector
-  toBV :: HWType -> LT.Text -> Ap (State state) Doc
+  toBV :: HWType -> LT.Text -> Ap (State AigerState) Doc
   toBV = undefined
 
   -- \| Convert from a bit-vector
-  fromBV :: HWType -> LT.Text -> Ap (State state) Doc
+  fromBV :: HWType -> LT.Text -> Ap (State AigerState) Doc
   fromBV = undefined
 
   -- \| Synthesis tool we're generating HDL for
-  hdlSyn :: State state HdlSyn
+  hdlSyn :: State AigerState HdlSyn
   hdlSyn = undefined
 
   -- \| setModName
-  setModName :: ModName -> state -> state
+  setModName :: ModName -> AigerState -> AigerState
   setModName = undefined
 
   -- \| Set the name of the current top entity
-  setTopName :: Identifier -> state -> state
+  setTopName :: Identifier -> AigerState -> AigerState
   setTopName = undefined
 
   -- \| Get the name of the current top entity
-  getTopName :: State state Identifier
+  getTopName :: State AigerState Identifier
   getTopName = undefined
 
   -- \| setSrcSpan
-  setSrcSpan :: SrcSpan -> State state ()
+  setSrcSpan :: SrcSpan -> State AigerState ()
   setSrcSpan = undefined
 
   -- \| getSrcSpan
-  getSrcSpan :: State state SrcSpan
+  getSrcSpan :: State AigerState SrcSpan
   getSrcSpan = undefined
 
   -- \| Block of declarations
-  blockDecl :: Identifier -> [Declaration] -> Ap (State state) Doc
+  blockDecl :: Identifier -> [Declaration] -> Ap (State AigerState) Doc
   blockDecl = undefined
-  addIncludes :: [(String, Doc)] -> State state ()
+  addIncludes :: [(String, Doc)] -> State AigerState ()
   addIncludes = undefined
-  addLibraries :: [LT.Text] -> State state ()
+  addLibraries :: [LT.Text] -> State AigerState ()
   addLibraries = undefined
 
-  addImports :: [LT.Text] -> State state ()
+  addImports :: [LT.Text] -> State AigerState ()
   addImports = undefined
 
-  addAndSetData :: FilePath -> State state String
+  addAndSetData :: FilePath -> State AigerState String
   addAndSetData = undefined
 
-  getDataFiles :: State state [(String, FilePath)]
+  getDataFiles :: State AigerState [(String, FilePath)]
   getDataFiles = undefined
 
-  addMemoryDataFile :: (String, String) -> State state ()
+  addMemoryDataFile :: (String, String) -> State AigerState ()
   addMemoryDataFile = undefined
 
-  getMemoryDataFiles :: State state [(String, String)]
+  getMemoryDataFiles :: State AigerState [(String, String)]
   getMemoryDataFiles = undefined
 
-  ifThenElseExpr :: state -> Bool
+  ifThenElseExpr :: AigerState -> Bool
   ifThenElseExpr = undefined
 
   -- \| Whether -fclash-aggressive-x-optimization-blackboxes was set
-  aggressiveXOptBB :: State state AggressiveXOptBB
+  aggressiveXOptBB :: State AigerState AggressiveXOptBB
   aggressiveXOptBB = undefined
 
   -- \| Whether -fclash-no-render-enums was set
-  renderEnums :: State state RenderEnums
+  renderEnums :: State AigerState RenderEnums
   renderEnums = undefined
 
   -- \| All the domain configurations of design
-  domainConfigurations :: State state DomainMap
+  domainConfigurations :: State AigerState DomainMap
   domainConfigurations = undefined
 
   -- \| Set the domain configurations
-  setDomainConfigurations :: DomainMap -> state -> state
+  setDomainConfigurations :: DomainMap -> AigerState -> AigerState
   setDomainConfigurations = undefined
