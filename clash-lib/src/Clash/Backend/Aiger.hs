@@ -1,24 +1,28 @@
 module Clash.Backend.Aiger (AigerState) where
 
 import Clash.Annotations.Primitive (HDL (..))
-import Clash.Backend
-import Clash.Driver.Types (ClashOpts)
-import Clash.Netlist.BlackBox.Types (HdlSyn)
-import qualified Clash.Netlist.Id as Id
-import Clash.Netlist.Types hiding (Literal, Usage)
-import Clash.Netlist.Util (typeSize)
-import Clash.Util
 import Control.Monad.State (State)
 import Data.HashSet (HashSet)
 import Data.Monoid (Ap (..))
+import GHC.Plugins (nTimes)
+
 import qualified Data.Text as TextS
 import qualified Data.Text.Lazy as LT
-import Data.Text.Prettyprint.Doc.Extra
-import GHC.Plugins (nTimes)
 import qualified System.FilePath
 
+import Clash.Backend
+import Clash.Driver.Types (ClashOpts)
+import Clash.Netlist.BlackBox.Types (HdlSyn)
+import Clash.Netlist.Types hiding (Literal, Usage)
+import Clash.Netlist.Util (typeSize)
+import Clash.Util
+import Data.Text.Prettyprint.Doc.Extra
+
+import qualified Clash.Netlist.Id as Id
+
 data AigerState = AigerState
-  {}
+  {
+  }
 
 instance HasIdentifierSet AigerState where
   identifierSet = undefined
@@ -28,12 +32,8 @@ instance HasUsageMap AigerState where
 
 type AigerM = Ap (State AigerState)
 
-instance Backend AigerState where
-  -- \| Initial state for state monad
-  initBackend _opts =
-    AigerState
-      {
-      }
+instance Backend AigerState where -- \| Initial state for state monad
+  initBackend _opts = AigerState{}
 
   -- \| What HDL is the backend generating
   hdlKind :: AigerState -> HDL
@@ -60,7 +60,14 @@ instance Backend AigerState where
 
   -- FIXME
   -- \| Generate HDL for a Netlist component
-  genHDL :: ClashOpts -> ModName -> SrcSpan -> IdentifierSet -> UsageMap -> Component -> AigerM ((String, Doc), [(String, Doc)])
+  genHDL ::
+    ClashOpts ->
+    ModName ->
+    SrcSpan ->
+    IdentifierSet ->
+    UsageMap ->
+    Component ->
+    AigerM ((String, Doc), [(String, Doc)])
   genHDL = genAIGER
 
   -- FIXME
@@ -209,26 +216,55 @@ genAIGER ::
 genAIGER _ _ _ _ _ c = do
   v <- (componentToAiger c <> line <> commentBlock)
   return ((TextS.unpack (Id.toText cname), v), [])
-  where
-    cname = componentName c
-    cmmt = ""
-    commentBlock = if cmmt == "" then emptyDoc else (pretty "c" <> line <> pretty cmmt)
+ where
+  cname = componentName c
+  cmmt = ""
+  commentBlock = if cmmt == "" then emptyDoc else (pretty "c" <> line <> pretty cmmt)
 
 -- FIXME
 componentToAiger :: Component -> AigerM Doc
 componentToAiger c = do
   (headerLine <> line <> d <> line <> symbolTable)
-  where
-    maxIndex = numInputs + numAndGates + numLatches
-    numInputs = sum $ map typeSize $ map snd $ inputs c
-    numLatches = 0
-    numOutputs = sum $ map typeSize $ map (\(_, a, _) -> snd a) $ outputs c
-    numAndGates = 0
+ where
+  maxIndex = numInputs + numAndGates + numLatches
+  numInputs = sum $ map typeSize $ map snd $ inputs c
+  numLatches = 0
+  numOutputs = sum $ map typeSize $ map (\(_, a, _) -> snd a) $ outputs c
+  numAndGates = 0
 
-    headerLine = pretty $ "aag " <> show maxIndex <> " " <> show numInputs <> " " <> show numLatches <> " " <> show numOutputs <> " " <> show numAndGates
-    d = inputLines <> outputLines
-    inputLines = foldr (<>) emptyDoc [nTimes (typeSize hwtype) (\a -> a <> pretty "input " <> pretty id_ <> line) emptyDoc | (id_, hwtype) <- inputs c]
-    -- latchLines =pure $ pretty ""
-    outputLines = foldr (<>) emptyDoc [nTimes (typeSize hwtype) (\a -> a <> pretty "output " <> pretty id_ <> line) emptyDoc | (_, (id_, hwtype), _) <- outputs c]
-    -- andGateLines = pure $ pretty ""
-    symbolTable = pretty $ show $ declarations c
+  headerLine =
+    pretty $
+      "aag "
+        <> show maxIndex
+        <> " "
+        <> show numInputs
+        <> " "
+        <> show numLatches
+        <> " "
+        <> show numOutputs
+        <> " "
+        <> show numAndGates
+  d = inputLines <> outputLines
+  inputLines =
+    foldr
+      (<>)
+      emptyDoc
+      [ nTimes
+          (typeSize hwtype)
+          (\a -> a <> pretty "input " <> pretty id_ <> line)
+          emptyDoc
+      | (id_, hwtype) <- inputs c
+      ]
+  -- latchLines =pure $ pretty ""
+  outputLines =
+    foldr
+      (<>)
+      emptyDoc
+      [ nTimes
+          (typeSize hwtype)
+          (\a -> a <> pretty "output " <> pretty id_ <> line)
+          emptyDoc
+      | (_, (id_, hwtype), _) <- outputs c
+      ]
+  -- andGateLines = pure $ pretty ""
+  symbolTable = pretty $ show $ declarations c
