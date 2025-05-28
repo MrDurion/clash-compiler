@@ -207,6 +207,7 @@ Library
                       Clash.Backend.Verilog.Time
                       Clash.Backend.VHDL
                       Clash.Backend.Aiger
+                      Clash.Backend.Aiger.CoreEdits
 
                       Clash.Core.DataCon
                       Clash.Core.EqSolver
