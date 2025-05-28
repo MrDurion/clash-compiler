@@ -104,6 +104,7 @@ import           Clash.Annotations.TopEntity
   (TopEntity (..), PortName(PortName, PortProduct))
 import           Clash.Annotations.TopEntity.Extra ()
 import           Clash.Backend
+import           Clash.Backend.Aiger.CoreEdits    (removeCase)
 import           Clash.Core.PartialEval as PE     (Evaluator)
 import           Clash.Core.Evaluator.Types as WHNF (Evaluator)
 import           Clash.Core.HasType
@@ -443,9 +444,11 @@ generateHDL env design hdlState typeTrans peEval eval mainTopEntity startTime = 
       -- files belonging to other top entities. Failing to do so leads to #463
       prepareDir hdlDir opts userModifications
 
+      let noCaseBindingsMap = removeCase bindingsMap
+      
       -- 2. Normalize topEntity
       supplyN <- Supply.newSupply
-      transformedBindings <- normalizeEntity env bindingsMap typeTrans peEval
+      transformedBindings <- normalizeEntity env noCaseBindingsMap typeTrans peEval
                                eval topEntityNames supplyN topEntity
 
       normTime <- transformedBindings `deepseq` Clock.getCurrentTime
