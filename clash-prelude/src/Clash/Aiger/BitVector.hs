@@ -4,9 +4,6 @@
 
 module Clash.Aiger.BitVector where
 
--- import Clash.Explicit.Prelude (SNatLE(..), Num ((-)), SNat)
--- import Clash.Sized.BitVector (BitVector)
--- import Clash.Prelude
 
 import GHC.TypeLits hiding (SNat)
 
