@@ -98,7 +98,7 @@ import           Clash.Netlist.BlackBox.Util (getUsedArguments)
 import           Clash.Netlist.Types     (TopEntityT(..))
 import           Clash.Primitives.Types
   (Primitive (..), CompiledPrimMap)
-import           Clash.Primitives.Util   (generatePrimMap)
+import           Clash.Primitives.Util   (generatePrimMap, generateAigerSubstitutionsMap, AigerSubstitutionsMap)
 import           Clash.Unique            (Unique)
 import           Clash.Util              (reportTimeDiff)
 import qualified Clash.Util.Interpolate as I
@@ -138,13 +138,15 @@ generateBindings opts startAction primDirs importDirs dbs hdl modName dflagsM = 
    , domainConfs ) <- loadModules startAction (toGhcOverridingBool (opt_color opts)) hdl modName dflagsM importDirs
   startTime <- Clock.getCurrentTime
   primMapR <- generatePrimMap unresolvedPrims primGuards (concat [pFP, primDirs, importDirs])
+  -- FIXME
+  aigerMap <- pure generateAigerSubstitutionsMap 
   tdir <- maybe ghcLibDir (pure . GHC.topDir) dflagsM
   primMapC <-
     sequence $ HashMap.map
                  (sequence . fmap (compilePrimitive importDirs dbs tdir))
                  primMapR
   let ((bindingsMap,clsVMap),tcMap,_) =
-        RWS.runRWS (mkBindings primMapC bindings clsOps unlocatable)
+        RWS.runRWS (mkBindings primMapC aigerMap bindings clsOps unlocatable)
                    (GHC2CoreEnv GHC.noSrcSpan fiEnvs)
                    emptyGHC2CoreState
       (tcMap',tupTcCache)           = mkTupTyCons tcMap
@@ -226,6 +228,8 @@ setNoInlineTopEntities bm tes =
 --
 mkBindings
   :: CompiledPrimMap
+  -- FIXME
+  -> AigerSubstitutionsMap
   -> [GHC.CoreBind]
   -- Binders
   -> [(GHC.CoreBndr,Int)]
@@ -235,12 +239,13 @@ mkBindings
   -> C2C ( BindingMap
          , VarEnv (Id,Int)
          )
-mkBindings primMap bindings clsOps unlocatable = do
+--FIXME
+mkBindings primMap aigerMap bindings clsOps unlocatable = do
   bindingsList <- mapM (\case
     GHC.NonRec v e -> do
       let sp = GHC.getSrcSpan v
           inl = GHC.inlinePragmaSpec . GHC.inlinePragInfo $ GHC.idInfo v
-      tm <- RWS.local (srcSpan .~ sp) (coreToTerm primMap unlocatable e)
+      tm <- RWS.local (srcSpan .~ sp) (coreToTerm primMap aigerMap unlocatable e)
       v' <- coreToId v
       nm <- qualifiedNameString (GHC.varName v)
       let pr = if HashMap.member nm primMap then IsPrim else IsFun
@@ -250,7 +255,7 @@ mkBindings primMap bindings clsOps unlocatable = do
       tms <- mapM (\(v,e) -> do
                     let sp  = GHC.getSrcSpan v
                         inl = GHC.inlinePragmaSpec . GHC.inlinePragInfo $ GHC.idInfo v
-                    tm <- RWS.local (srcSpan .~ sp) (coreToTerm primMap unlocatable e)
+                    tm <- RWS.local (srcSpan .~ sp) (coreToTerm primMap aigerMap unlocatable e)
                     v' <- coreToId v
                     nm <- qualifiedNameString (GHC.varName v)
                     let pr = if HashMap.member nm primMap then IsPrim else IsFun

@@ -16,6 +16,8 @@
 
 module Clash.Primitives.Util
   ( generatePrimMap
+  , generateAigerSubstitutionsMap
+  , AigerSubstitutionsMap
   , hashCompiledPrimMap
   , constantArgs
   , decodeOrErrJson
@@ -156,6 +158,11 @@ addGuards = foldl go
           HasBlackBox (ws1 ++ ws2) p
       )
       primMap
+
+--FIXME
+type AigerSubstitutionsMap = Int
+generateAigerSubstitutionsMap :: AigerSubstitutionsMap
+generateAigerSubstitutionsMap = undefined
 
 -- | Generate a set of primitives that are found in the primitive definition
 -- files in the given directories.
