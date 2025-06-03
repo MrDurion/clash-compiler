@@ -201,6 +201,9 @@ import Clash.XException
 
 import Clash.Sized.Internal.Mod
 
+import qualified Clash.Aiger.BitVector
+import Clash.Annotations.AigerSubstitute
+
 import {-# SOURCE #-} qualified Clash.Sized.Vector         as V
 import {-# SOURCE #-} qualified Clash.Sized.Internal.Index as I
 import                qualified Data.Char                  as C
@@ -1220,6 +1223,7 @@ or# =
     complementN = complementMod (natVal (Proxy @n))
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN xor# (aigerSubstitute 'Clash.Aiger.BitVector.xor#) #-}
 {-# CLASH_OPAQUE xor# #-}
 {-# ANN xor# hasBlackBox #-}
 xor# =
