@@ -1,28 +1,53 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module Clash.Backend.Aiger (AigerState) where
 
 import Clash.Annotations.Primitive (HDL (..))
+import Control.Lens
 import Control.Monad.State (State)
 import Data.HashSet (HashSet)
 import Data.Monoid (Ap (..))
-import GHC.Plugins (nTimes)
 
 import qualified Data.Text as TextS
 import qualified Data.Text.Lazy as LT
 import qualified System.FilePath
 
-import Clash.Backend
+import Clash.Backend hiding (Usage)
 import Clash.Driver.Types (ClashOpts)
 import Clash.Netlist.BlackBox.Types (HdlSyn)
+import Clash.Netlist.Types (Usage)
 import Clash.Netlist.Types hiding (Literal, Usage)
 import Clash.Netlist.Util (typeSize)
 import Clash.Util
 import Data.Text.Prettyprint.Doc.Extra
 
+import qualified Clash.Backend
 import qualified Clash.Netlist.Id as Id
 
+type BUsage = Clash.Backend.Usage
+
+class RelatedIdentifier s where
+  bitIndex :: s -> Int
+  identifier :: s -> Identifier
+
+data InputNode = InputNode Identifier Int Int
+data OutputNode = OutputNode Identifier Int (Maybe Int)
+
+instance RelatedIdentifier InputNode where
+  bitIndex (InputNode _ b _) = b
+  identifier (InputNode i _ _) = i
+
+instance RelatedIdentifier OutputNode where
+  bitIndex (OutputNode _ b _) = b
+  identifier (OutputNode i _ _) = i
+
 data AigerState = AigerState
-  {
+  { _maxIndex :: Int
+  , _inputNodes :: [InputNode]
+  , _outputNodes :: [OutputNode]
   }
+
+makeLenses ''AigerState
 
 instance HasIdentifierSet AigerState where
   identifierSet = undefined
@@ -33,7 +58,7 @@ instance HasUsageMap AigerState where
 type AigerM = Ap (State AigerState)
 
 instance Backend AigerState where -- \| Initial state for state monad
-  initBackend _opts = AigerState{}
+  initBackend _opts = AigerState{_maxIndex = 0, _inputNodes = [], _outputNodes = []}
 
   -- \| What HDL is the backend generating
   hdlKind :: AigerState -> HDL
@@ -77,7 +102,7 @@ instance Backend AigerState where -- \| Initial state for state monad
 
   -- FIXME
   -- \| Convert a Netlist HWType to a target HDL type
-  hdlType :: Usage -> HWType -> AigerM Doc
+  hdlType :: BUsage -> HWType -> AigerM Doc
   hdlType _ _ = pretty "hdlType stuff here"
 
   -- FIXME define the types for each HWType in AIGER
@@ -224,47 +249,92 @@ genAIGER _ _ _ _ _ c = do
 -- FIXME
 componentToAiger :: Component -> AigerM Doc
 componentToAiger c = do
-  (headerLine <> line <> d <> line <> symbolTable)
- where
-  maxIndex = numInputs + numAndGates + numLatches
-  numInputs = sum $ map typeSize $ map snd $ inputs c
-  numLatches = 0
-  numOutputs = sum $ map typeSize $ map (\(_, a, _) -> snd a) $ outputs c
-  numAndGates = 0
+  saveInputs c
+  _ <- mapM parseDeclaration $ declarations c
 
-  headerLine =
-    pretty $
-      "aag "
-        <> show maxIndex
-        <> " "
-        <> show numInputs
-        <> " "
-        <> show numLatches
-        <> " "
-        <> show numOutputs
-        <> " "
-        <> show numAndGates
-  d = inputLines <> outputLines
-  inputLines =
-    foldr
-      (<>)
-      emptyDoc
-      [ nTimes
-          (typeSize hwtype)
-          (\a -> a <> pretty "input " <> pretty id_ <> line)
-          emptyDoc
-      | (id_, hwtype) <- inputs c
-      ]
-  -- latchLines =pure $ pretty ""
-  outputLines =
-    foldr
-      (<>)
-      emptyDoc
-      [ nTimes
-          (typeSize hwtype)
-          (\a -> a <> pretty "output " <> pretty id_ <> line)
-          emptyDoc
-      | (_, (id_, hwtype), _) <- outputs c
-      ]
-  -- andGateLines = pure $ pretty ""
-  symbolTable = pretty $ show $ declarations c
+  i <- Ap $ use inputNodes
+  let numInputs = length i
+  mInd <- Ap $ use maxIndex
+  let headerLine =
+        pretty $
+          "aag "
+            <> show mInd
+            <> " "
+            <> show numInputs
+            <> " "
+            <> show numLatches
+            <> " "
+            <> show numOutputs
+            <> " "
+            <> show numAndGates
+
+  (headerLine <> line <> writeInputs <> writeOutputs <> line <> symbolTable)
+ where
+  numLatches = 0 :: Int
+  numOutputs = sum $ map typeSize $ map (\(_, a, _) -> snd a) $ outputs c
+  numAndGates = 0 :: Int
+  symbolTable = emptyDoc -- pretty $ show $ declarations c
+
+getIndex :: AigerM Int
+getIndex = Ap $ use maxIndex
+
+getNewIndex :: AigerM Int
+getNewIndex = do
+  i <- getIndex
+  Ap $ maxIndex += 1
+  pure i
+
+saveInput :: (Identifier, HWType) -> AigerM ()
+saveInput (ident, hwtype) = do
+  innotes <- Ap $ use inputNodes
+  newInputNodes <-
+    mapM
+      ( \i ->
+          ( do
+              newIndex <- getNewIndex
+              pure $ InputNode ident i newIndex
+          )
+      )
+      [0 .. amount]
+  Ap $ inputNodes .= (innotes ++ newInputNodes)
+  pure ()
+ where
+  amount = typeSize hwtype
+
+saveInputs :: Component -> AigerM ()
+saveInputs c = do
+  _ <- mapM saveInput i
+  pure ()
+ where
+  i = inputs c
+
+writeInput :: InputNode -> AigerM Doc
+writeInput (InputNode _ _ i) = pretty i
+
+writeInputs :: AigerM Doc
+writeInputs = do
+  i <- Ap $ use inputNodes
+  vcat $ mapM writeInput i
+
+assignmentIdentifierToIdentifier :: Identifier -> Identifier -> AigerM ()
+assignmentIdentifierToIdentifier i i2 = pure ()
+
+parseAssignmentDeclaration :: Identifier -> Usage -> Expr -> AigerM ()
+parseAssignmentDeclaration i u e = case e of
+  Identifier rI mM -> assignmentIdentifierToIdentifier i rI
+  _ -> pure ()
+
+parseDeclaration :: Declaration -> AigerM ()
+parseDeclaration d = case d of
+  Assignment i u e -> parseAssignmentDeclaration i u e
+  _ -> pure ()
+
+writeOutput :: OutputNode -> AigerM Doc
+writeOutput (OutputNode _ _ ref) = case ref of
+  Just ind -> pretty ind
+  _ -> emptyDoc
+
+writeOutputs :: AigerM Doc
+writeOutputs = do
+  o <- Ap $ use outputNodes
+  vcat $ mapM writeOutput o
