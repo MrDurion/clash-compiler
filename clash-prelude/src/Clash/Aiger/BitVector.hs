@@ -1,11 +1,9 @@
-{-# LANGUAGE MagicHash #-}
 {-# OPTIONS_GHC -fplugin GHC.TypeLits.KnownNat.Solver #-}
 {-# OPTIONS_GHC -fplugin GHC.TypeLits.Normalise #-}
 
 module Clash.Aiger.BitVector where
 
-
-import GHC.TypeLits hiding (SNat)
+import GHC.TypeLits (KnownNat, type (-))
 
 import Clash.Promoted.Nat (SNat (..), SNatLE (..), compareSNat)
 import {-# SOURCE #-} Clash.Sized.Internal.BitVector
