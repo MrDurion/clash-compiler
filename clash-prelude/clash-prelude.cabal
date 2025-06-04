@@ -179,6 +179,7 @@ Library
   Autogen-Modules:    Paths_clash_prelude
 
   Exposed-modules:    Clash.Aiger.BitVector
+                      Clash.Aiger.Unsigned
 
                       Clash.Annotations.TopEntity
                       Clash.Annotations.Primitive

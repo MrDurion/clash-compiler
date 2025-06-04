@@ -147,6 +147,9 @@ import Clash.Sized.Internal.Mod
 import Clash.XException
   (ShowX (..), NFDataX (..), errorX, showsPrecXWith, rwhnfX)
 
+import qualified Clash.Aiger.Unsigned
+import Clash.Annotations.AigerSubstitute
+
 {- $setup
 >>> :m -Prelude
 >>> import Clash.Prelude
@@ -573,6 +576,7 @@ or# :: Unsigned n -> Unsigned n -> Unsigned n
 or# (U v1) (U v2) = U (v1 .|. v2)
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN xor# (aigerSubstitute 'Clash.Aiger.Unsigned.xor#) #-}
 {-# CLASH_OPAQUE xor# #-}
 {-# ANN xor# hasBlackBox #-}
 xor# :: Unsigned n -> Unsigned n -> Unsigned n
