@@ -98,7 +98,7 @@ import           Clash.Netlist.BlackBox.Util (getUsedArguments)
 import           Clash.Netlist.Types     (TopEntityT(..))
 import           Clash.Primitives.Types
   (Primitive (..), CompiledPrimMap)
-import           Clash.Primitives.Util   (generatePrimMap, generateAigerSubstitutionsMap, AigerSubstitutionsMap)
+import           Clash.Primitives.Util   (generatePrimMap, generateAigerSubstitutionMap, AigerSubstitutionMap)
 import           Clash.Unique            (Unique)
 import           Clash.Util              (reportTimeDiff)
 import qualified Clash.Util.Interpolate as I
@@ -135,11 +135,11 @@ generateBindings opts startAction primDirs importDirs dbs hdl modName dflagsM = 
    , partitionEithers -> (unresolvedPrims, pFP)
    , customBitRepresentations
    , primGuards
+   , aigerSubs 
    , domainConfs ) <- loadModules startAction (toGhcOverridingBool (opt_color opts)) hdl modName dflagsM importDirs
   startTime <- Clock.getCurrentTime
   primMapR <- generatePrimMap unresolvedPrims primGuards (concat [pFP, primDirs, importDirs])
-  -- FIXME
-  aigerMap <- pure generateAigerSubstitutionsMap 
+  aigerMap <- pure $ generateAigerSubstitutionMap aigerSubs
   tdir <- maybe ghcLibDir (pure . GHC.topDir) dflagsM
   primMapC <-
     sequence $ HashMap.map
@@ -229,7 +229,7 @@ setNoInlineTopEntities bm tes =
 mkBindings
   :: CompiledPrimMap
   -- FIXME
-  -> AigerSubstitutionsMap
+  -> AigerSubstitutionMap
   -> [GHC.CoreBind]
   -- Binders
   -> [(GHC.CoreBndr,Int)]

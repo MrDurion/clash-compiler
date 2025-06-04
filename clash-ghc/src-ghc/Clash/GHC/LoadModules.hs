@@ -204,6 +204,7 @@ import           Clash.Annotations.BitRepresentation.Internal
   (DataRepr', dataReprAnnToDataRepr')
 
 import           Clash.Signal.Internal
+import Clash.Annotations.AigerSubstitution (AigerSubstitution(..))
 
 ghcLibDir :: IO FilePath
 #ifdef USE_GHC_PATHS
@@ -575,6 +576,7 @@ loadModules
         , [Either UnresolvedPrimitive FilePath]
         , [DataRepr']
         , [(Text.Text, PrimitiveGuard ())]
+        , [(CoreSyn.CoreBndr, AigerSubstitution)]
         , HashMap Text.Text VDomainConfiguration -- domain names to configuration
         )
 loadModules startAction useColor hdl modName dflagsM idirs = do
@@ -643,6 +645,7 @@ loadModules startAction useColor hdl modName dflagsM idirs = do
     benchAnn   <- findTestBenches rootIds
     reprs'     <- findCustomReprAnnotations
     primGuards <- findPrimitiveGuardAnnotations allBinderIds
+    aigerSubstitutes <- findAigerSubstitutionAnnotations allBinderIds
     let
       -- All binders synthesized with Synthesize, all binders annotated with
       -- TestBench and the binders they're pointing to, plus magically named
@@ -736,6 +739,7 @@ loadModules startAction useColor hdl modName dflagsM idirs = do
            , toList lbPrims
            , toList reprs1
            , primGuards
+           , aigerSubstitutes
            , knownConfMap
            )
 
@@ -915,6 +919,16 @@ findPrimitiveGuardAnnotations bndrs = do
     (HasBlackBox x _, HasBlackBox y _) -> Right (HasBlackBox (x++y) ())
     (DontTranslate  , DontTranslate)   -> Right DontTranslate
     (_,_) -> Left "One binder can't have both HasBlackBox and DontTranslate annotations."
+
+
+findAigerSubstitutionAnnotations
+  :: GHC.GhcMonad m
+  => [CoreSyn.CoreBndr]
+  -> m [(CoreSyn.CoreBndr, AigerSubstitution)]
+findAigerSubstitutionAnnotations bndrs = do
+  anns0 <- findNamedAnnotations bndrs
+  pure $ combineAnnotationsWith (const (Right)) "AigerSubstitution" bndrs anns0
+
 
 
 -- | Find annotations of type @DataReprAnn@ and convert them to @DataRepr'@

@@ -198,10 +198,11 @@ import qualified Clash.Core.Var              as C
 import qualified Clash.Data.UniqMap          as C
 import           Clash.Normalize.Primitives  as C
 import           Clash.Primitives.Types      hiding (name)
+import           Clash.Primitives.Util       (AigerSubstitutionMap)
 import           Clash.Unique                (fromGhcUnique)
 import           Clash.Util
 import           Clash.GHC.Util
-import Clash.Primitives.Util (AigerSubstitutionsMap)
+
 
 instance Hashable Name where
   hashWithSalt s = hashWithSalt s . getKey . nameUnique
@@ -378,7 +379,7 @@ makeAlgTyConRhs algTcRhs = case algTcRhs of
 
 coreToTerm
   :: CompiledPrimMap
-  -> AigerSubstitutionsMap
+  -> AigerSubstitutionMap
   -> [Var]
   -> CoreExpr
   -> C2C C.Term
@@ -592,8 +593,15 @@ coreToTerm primMap aigerMap unlocs = term
     lookupPrim :: Text -> Maybe (Maybe CompiledPrimitive)
     lookupPrim nm = extractPrim <$> HashMap.lookup nm primMap
 
-    var x = do
+      
+    var x = 
         --FIXME lookup aiger substitutions and do `var aigerX`
+        case lookup x aigerMap of
+            (Just asdfasdf) -> var' asdfasdf 
+            (Nothing) -> var' x
+        
+
+    var' x = do
         xPrim <- if isGlobalId x then coreToPrimVar x else coreToVar x
         let xNameS = C.nameOcc xPrim
         xType  <- coreToType (varType x)

@@ -16,8 +16,8 @@
 
 module Clash.Primitives.Util
   ( generatePrimMap
-  , generateAigerSubstitutionsMap
-  , AigerSubstitutionsMap
+  , generateAigerSubstitutionMap
+  , AigerSubstitutionMap
   , hashCompiledPrimMap
   , constantArgs
   , decodeOrErrJson
@@ -39,6 +39,7 @@ import qualified Data.Text              as TS
 import           Data.Text.Lazy         (Text)
 import qualified Data.Text.Lazy.IO      as T
 import           GHC.Stack              (HasCallStack)
+import           GHC.Types.Var          (Id)
 import qualified System.Directory       as Directory
 import qualified System.FilePath        as FilePath
 import           System.IO.Error        (tryIOError)
@@ -59,6 +60,9 @@ import           Clash.Netlist.BlackBox.Util
   (walkElement)
 import           Clash.Netlist.BlackBox.Types
   (Element(Const, Lit), BlackBoxMeta(..))
+import GHC.Core (CoreBndr)
+import Clash.Annotations.AigerSubstitution (AigerSubstitution)
+-- FIXME import sorting and allignment
 
 hashCompiledPrimitive :: CompiledPrimitive -> Int
 hashCompiledPrimitive (Primitive {name, primSort}) = hash (name, primSort)
@@ -159,10 +163,10 @@ addGuards = foldl go
       )
       primMap
 
+type AigerSubstitutionMap = [(Id, Id)]
+generateAigerSubstitutionMap :: [(CoreBndr, AigerSubstitution)] -> AigerSubstitutionMap
 --FIXME
-type AigerSubstitutionsMap = Int
-generateAigerSubstitutionsMap :: AigerSubstitutionsMap
-generateAigerSubstitutionsMap = undefined
+generateAigerSubstitutionMap _ = []
 
 -- | Generate a set of primitives that are found in the primitive definition
 -- files in the given directories.
