@@ -597,7 +597,7 @@ coreToTerm primMap aigerMap unlocs = term
     var x = 
         --FIXME lookup aiger substitutions and do `var aigerX`
         case lookup x aigerMap of
-            (Just asdfasdf) -> var' asdfasdf 
+            Just sub -> C.Var <$> (C.mkGlobalId <$> (coreToType $ varType x) <*> (coreToName (id) (getUnique) (qualifiedNameStringM) (sub)))
             (Nothing) -> var' x
         
 

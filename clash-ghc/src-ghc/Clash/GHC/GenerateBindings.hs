@@ -135,11 +135,10 @@ generateBindings opts startAction primDirs importDirs dbs hdl modName dflagsM = 
    , partitionEithers -> (unresolvedPrims, pFP)
    , customBitRepresentations
    , primGuards
-   , aigerSubs 
+   , aigerMap 
    , domainConfs ) <- loadModules startAction (toGhcOverridingBool (opt_color opts)) hdl modName dflagsM importDirs
   startTime <- Clock.getCurrentTime
   primMapR <- generatePrimMap unresolvedPrims primGuards (concat [pFP, primDirs, importDirs])
-  aigerMap <- pure $ generateAigerSubstitutionMap aigerSubs
   tdir <- maybe ghcLibDir (pure . GHC.topDir) dflagsM
   primMapC <-
     sequence $ HashMap.map

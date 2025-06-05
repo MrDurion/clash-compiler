@@ -39,7 +39,6 @@ import qualified Data.Text              as TS
 import           Data.Text.Lazy         (Text)
 import qualified Data.Text.Lazy.IO      as T
 import           GHC.Stack              (HasCallStack)
-import           GHC.Types.Var          (Id)
 import qualified System.Directory       as Directory
 import qualified System.FilePath        as FilePath
 import           System.IO.Error        (tryIOError)
@@ -60,9 +59,13 @@ import           Clash.Netlist.BlackBox.Util
   (walkElement)
 import           Clash.Netlist.BlackBox.Types
   (Element(Const, Lit), BlackBoxMeta(..))
+--FIXME alignment and placing
 import GHC.Core (CoreBndr)
-import Clash.Annotations.AigerSubstitution (AigerSubstitution)
--- FIXME import sorting and allignment
+import Clash.Annotations.AigerSubstitution (AigerSubstitution (..))
+import GHC.Plugins (thNameToGhcNameIO, hsc_NC)
+import qualified GHC
+import GHC.Types.Name (Name)
+import Control.Monad.IO.Class (liftIO)
 
 hashCompiledPrimitive :: CompiledPrimitive -> Int
 hashCompiledPrimitive (Primitive {name, primSort}) = hash (name, primSort)
@@ -163,10 +166,18 @@ addGuards = foldl go
       )
       primMap
 
-type AigerSubstitutionMap = [(Id, Id)]
-generateAigerSubstitutionMap :: [(CoreBndr, AigerSubstitution)] -> AigerSubstitutionMap
+type AigerSubstitutionMap = [(CoreBndr, Name)]
+
 --FIXME
-generateAigerSubstitutionMap _ = []
+generateAigerSubstitutionMap :: (GHC.GhcMonad m) => [(CoreBndr, AigerSubstitution)] -> m AigerSubstitutionMap
+generateAigerSubstitutionMap x = mapM toAigerMap x
+ where 
+  toAigerMap (cb:: CoreBndr, AigerSubstitution as) = do
+    hsc_env <- GHC.getSession
+    mname <- liftIO $ thNameToGhcNameIO (hsc_NC hsc_env) as
+    case mname of
+      Just name -> pure (cb, name)
+      Nothing -> liftIO $ fail $ "Could not find reference to " ++ show as
 
 -- | Generate a set of primitives that are found in the primitive definition
 -- files in the given directories.

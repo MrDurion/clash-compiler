@@ -205,6 +205,7 @@ import           Clash.Annotations.BitRepresentation.Internal
 
 import           Clash.Signal.Internal
 import Clash.Annotations.AigerSubstitution (AigerSubstitution(..))
+import Clash.Primitives.Util (generateAigerSubstitutionMap, AigerSubstitutionMap)
 
 ghcLibDir :: IO FilePath
 #ifdef USE_GHC_PATHS
@@ -576,7 +577,7 @@ loadModules
         , [Either UnresolvedPrimitive FilePath]
         , [DataRepr']
         , [(Text.Text, PrimitiveGuard ())]
-        , [(CoreSyn.CoreBndr, AigerSubstitution)]
+        , AigerSubstitutionMap
         , HashMap Text.Text VDomainConfiguration -- domain names to configuration
         )
 loadModules startAction useColor hdl modName dflagsM idirs = do
@@ -645,7 +646,8 @@ loadModules startAction useColor hdl modName dflagsM idirs = do
     benchAnn   <- findTestBenches rootIds
     reprs'     <- findCustomReprAnnotations
     primGuards <- findPrimitiveGuardAnnotations allBinderIds
-    aigerSubstitutes <- findAigerSubstitutionAnnotations allBinderIds
+    aigerSubs <- findAigerSubstitutionAnnotations allBinderIds
+    aigerSubstitutes <- generateAigerSubstitutionMap aigerSubs
     let
       -- All binders synthesized with Synthesize, all binders annotated with
       -- TestBench and the binders they're pointing to, plus magically named
