@@ -16,6 +16,7 @@
 
 module Clash.Primitives.Util
   ( generatePrimMap
+  , mapAigerSubToGhcName
   , generateAigerSubstitutionMap
   , AigerSubstitutionMap
   , hashCompiledPrimMap
@@ -172,11 +173,16 @@ type AigerSubstitutionMap = [(CoreBndr, Name)]
 generateAigerSubstitutionMap :: (GHC.GhcMonad m) => [(CoreBndr, AigerSubstitution)] -> m AigerSubstitutionMap
 generateAigerSubstitutionMap x = mapM toAigerMap x
  where 
-  toAigerMap (cb:: CoreBndr, AigerSubstitution as) = do
+  toAigerMap (cb:: CoreBndr, as) = do
+    (cb,) <$> mapAigerSubToGhcName as
+
+
+mapAigerSubToGhcName :: GHC.GhcMonad m => AigerSubstitution -> m Name
+mapAigerSubToGhcName (AigerSubstitution as) = do
     hsc_env <- GHC.getSession
     mname <- liftIO $ thNameToGhcNameIO (hsc_NC hsc_env) as
     case mname of
-      Just name -> pure (cb, name)
+      Just name -> pure name
       Nothing -> liftIO $ fail $ "Could not find reference to " ++ show as
 
 -- | Generate a set of primitives that are found in the primitive definition

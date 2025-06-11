@@ -18,6 +18,7 @@
 
 module Clash.GHC.LoadModules
   ( loadModules
+  , findAigerSubstitutionAnnotations
   , ghcLibDir
   , setWantedLanguageExtensions
   )
