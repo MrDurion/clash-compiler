@@ -114,11 +114,13 @@ import           Clash.Annotations.Primitive
 import           Clash.Annotations.BitRepresentation (DataReprAnn)
 import           Clash.Debug                         (traceIf)
 import           Clash.Primitives.Types              (UnresolvedPrimitive, name)
-import           Clash.Primitives.Util               (decodeOrErrJson, decodeOrErrYaml)
+import           Clash.Primitives.Util               (decodeOrErrJson, decodeOrErrYaml, mapAigerSubToGhcName)
 import           Clash.GHC.GHC2Core                  (qualifiedNameString')
 import           Clash.Util                          (curLoc)
 import qualified Clash.Util.Interpolate              as I
 import           Clash.GHC.Util
+--FIXME ordering and aligning
+import Clash.Annotations.AigerSubstitution (AigerSubstitution (..))
 
 -- | Data structure tracking loaded binders (and their related data)
 data LoadedBinders = LoadedBinders
@@ -364,12 +366,32 @@ loadAnnotationsM ::
   StateT LoadedBinders m ()
 loadAnnotationsM hdl modName iface = do
   anns <- lift (runIfl modName (TcIface.tcIfaceAnnotations (GHC.mi_anns iface)))
+  -- FIXME 
+  loadAigerSubstitutionAnnotations anns 
+  -- END FIXME
   primFPs <- loadPrimitiveAnnotations hdl anns
   let reprs = loadCustomReprAnnotations anns
   modify $ \lb@LoadedBinders{..} -> lb
     { lbPrims = lbPrims <> Seq.fromList primFPs
     , lbReprs = lbReprs <> Seq.fromList reprs
     }
+
+loadAigerSubstitutionAnnotations ::
+  GHC.GhcMonad m =>
+  [Annotation] ->
+  LoadedBinderT m ()
+loadAigerSubstitutionAnnotations anns = do
+  let aigerSubs = mapMaybe filterAigerSubs anns
+  mname <- lift $ mapM mapAigerSubToGhcName aigerSubs
+  tyThings <- lift $ catMaybes <$> mapM GHC.lookupName mname
+  let rootIds = [(id_) | GHC.AnId id_ <- tyThings]
+  mapM (loadExprFromIface AIGER) rootIds >> pure ()
+ where
+  filterAigerSubs (Annotations.Annotation _ value) =
+    deserialize value
+  deserialize =
+    GhcPlugins.fromSerialized
+      (GhcPlugins.deserializeWithData :: [Word8] -> AigerSubstitution)
 
 loadExprFromIface ::
   GHC.GhcMonad m =>
