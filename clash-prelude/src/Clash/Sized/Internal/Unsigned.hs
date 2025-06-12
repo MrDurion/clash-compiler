@@ -576,7 +576,7 @@ or# :: Unsigned n -> Unsigned n -> Unsigned n
 or# (U v1) (U v2) = U (v1 .|. v2)
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN xor# (aigerSubstitution 'Clash.Aiger.Unsigned.xorAIGER#) #-}
+{-# ANN xor# (aigerSubstitution 'Clash.Aiger.Unsigned.xor#) #-}
 {-# CLASH_OPAQUE xor# #-}
 {-# ANN xor# hasBlackBox #-}
 xor# :: KnownNat n => Unsigned n -> Unsigned n -> Unsigned n

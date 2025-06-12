@@ -1223,7 +1223,7 @@ or# =
     complementN = complementMod (natVal (Proxy @n))
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN xor# (aigerSubstitution 'Clash.Aiger.BitVector.bvxorAIGER#) #-}
+{-# ANN xor# (aigerSubstitution 'Clash.Aiger.BitVector.xor#) #-}
 {-# CLASH_OPAQUE xor# #-}
 {-# ANN xor# hasBlackBox #-}
 xor# =
