@@ -6,5 +6,5 @@ import {-# SOURCE #-} Clash.Sized.Internal.Unsigned
 
 import qualified Clash.Sized.Internal.BitVector as BV
 
-xorAIGER# :: (KnownNat n) => Unsigned n -> Unsigned n -> Unsigned n
+xorAIGER# :: Unsigned n -> Unsigned n -> Unsigned n
 xorAIGER# v1 v2 = unpack# (pack# v1 `BV.xor#` pack# v2)
