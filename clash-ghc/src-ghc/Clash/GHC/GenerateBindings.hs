@@ -98,7 +98,7 @@ import           Clash.Netlist.BlackBox.Util (getUsedArguments)
 import           Clash.Netlist.Types     (TopEntityT(..))
 import           Clash.Primitives.Types
   (Primitive (..), CompiledPrimMap)
-import           Clash.Primitives.Util   (generatePrimMap, generateAigerSubstitutionMap, AigerSubstitutionMap)
+import           Clash.Primitives.Util   (generatePrimMap, AigerSubstitutionMap)
 import           Clash.Unique            (Unique)
 import           Clash.Util              (reportTimeDiff)
 import qualified Clash.Util.Interpolate as I
