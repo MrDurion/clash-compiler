@@ -180,6 +180,7 @@ Library
 
   Exposed-modules:    Clash.Aiger.BitVector
                       Clash.Aiger.Unsigned
+                      Clash.Aiger.Util
 
                       Clash.Annotations.TopEntity
                       Clash.Annotations.Primitive
