@@ -467,6 +467,8 @@ test-suite unittests
                  Clash.Tests.Laws.Enum
                  Clash.Tests.Laws.SaturatingNum
 
+                 Clash.Tests.Aiger.BitVector
+
                  Hedgehog.Extra
 
                  Test.Tasty.HUnit.Extra

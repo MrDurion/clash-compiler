@@ -29,6 +29,8 @@ import qualified Clash.Tests.XException
 import qualified Clash.Tests.Laws.Enum
 import qualified Clash.Tests.Laws.SaturatingNum
 
+import qualified Clash.Tests.Aiger.BitVector
+
 tests :: TestTree
 tests = testGroup "Unittests"
   [ Clash.Tests.AsyncFIFOSynchronizer.tests
@@ -58,6 +60,7 @@ tests = testGroup "Unittests"
     [ Clash.Tests.Laws.Enum.tests
     , Clash.Tests.Laws.SaturatingNum.tests
     ]
+  , Clash.Tests.Aiger.BitVector.tests
   ]
 
 main :: IO ()
