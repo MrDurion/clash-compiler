@@ -1,5 +1,4 @@
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -fplugin GHC.TypeLits.KnownNat.Solver #-}
 {-# OPTIONS_GHC -fplugin GHC.TypeLits.Normalise #-}
 
@@ -15,12 +14,11 @@ import {-# SOURCE #-} qualified Clash.Sized.Internal.BitVector as BV
 maybeBV ::
   forall n d.
   (KnownNat n) =>
-  BitVector n ->
-  ((KnownNat n, 1 <= n) => BitVector n -> d) ->
+  ((KnownNat n, 1 <= n) => d) ->
   ((KnownNat n, n <= 0) => d) ->
   d
-maybeBV bv f d = case compareSNat (SNat :: SNat n) (SNat :: SNat 0) of
-  (SNatGT) -> f bv
+maybeBV f d = case compareSNat (SNat :: SNat n) (SNat :: SNat 0) of
+  (SNatGT) -> f
   (SNatLE) -> d
 
 destructBV ::
@@ -44,12 +42,12 @@ maybeDestructBV ::
   d ->
   BitVector n ->
   d
-maybeDestructBV f d bv = maybeBV bv go d
+maybeDestructBV f d bv = maybeBV @n go d
  where
-  go :: (KnownNat n, 1 <= n) => BitVector n -> d
-  go bb =
+  go :: (1 <= n) => d
+  go =
     let
-      (b, bs) = destructBV bb
+      (b, bs) = destructBV bv
      in
       f b bs
 
@@ -60,12 +58,12 @@ maybeLDestructBV ::
   d ->
   BitVector n ->
   d
-maybeLDestructBV f d bv = maybeBV bv f' d
+maybeLDestructBV f d bv = maybeBV @(n) f' d
  where
-  f' :: ((1 <= n) => BitVector n -> d)
-  f' bb = f bs b
+  f' :: ((1 <= n) => d)
+  f' = f bs b
    where
-    (bs, b) = rdestructBV bb
+    (bs, b) = rdestructBV bv
 
 maybeDestructBV2 ::
   forall n d.
@@ -75,10 +73,10 @@ maybeDestructBV2 ::
   BitVector n ->
   BitVector n ->
   d
-maybeDestructBV2 f d bv1 bv2 = maybeBV bv1 f' d
+maybeDestructBV2 f d bv1 bv2 = maybeBV @n f' d
  where
-  f' :: (KnownNat n, 1 <= n) => BitVector n -> d
-  f' _ =
+  f' :: (KnownNat n, 1 <= n) => d
+  f' =
     let
       (bit1, bs1) = destructBV bv1
       (bit2, bs2) = destructBV bv2

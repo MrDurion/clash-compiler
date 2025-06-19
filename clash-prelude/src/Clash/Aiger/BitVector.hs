@@ -6,7 +6,7 @@
 
 module Clash.Aiger.BitVector where
 
-import GHC.TypeLits (KnownNat, type (+), type (-), type (<=))
+import GHC.TypeLits (KnownNat)
 
 import Clash.Aiger.Util
 import {-# SOURCE #-} Clash.Class.BitPack.Internal (bitToBool)
