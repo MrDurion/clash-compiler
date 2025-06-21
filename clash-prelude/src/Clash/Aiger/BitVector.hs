@@ -44,13 +44,13 @@ shiftlBV bv = maybeDestructBV go bv bv
   go _ bs = bs BV.++# BV.pack# BV.low
 shiftrBV bv = maybeLDestructBV go bv bv
  where
-  go bs _ = bs BV.++# BV.pack# BV.low
+  go bs _ = BV.pack# BV.low BV.++# bs
 rotatelBV bv = maybeDestructBV go bv bv
  where
   go b bs = bs BV.++# BV.pack# b
 rotaterBV bv = maybeLDestructBV go bv bv
  where
-  go bs b = bs BV.++# BV.pack# b
+  go bs b = BV.pack# b BV.++# bs
 
 shiftL#
   , shiftR#
@@ -88,7 +88,7 @@ rotateR# bv i =
     | i == 0 ->
         bv
     | otherwise ->
-        rotateL# (rotaterBV bv) (i - 1)
+        rotateR# (rotaterBV bv) (i - 1)
 
 -- TODO should this be a sub or a primitive?
 -- truncateB# ::
