@@ -468,6 +468,7 @@ test-suite unittests
                  Clash.Tests.Laws.SaturatingNum
 
                  Clash.Tests.Aiger.BitVector
+                 Clash.Tests.Aiger.TH
 
                  Hedgehog.Extra
 

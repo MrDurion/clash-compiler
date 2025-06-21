@@ -1,21 +1,16 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE CPP #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -fplugin=GHC.TypeLits.Extra.Solver #-}
 {-# OPTIONS_GHC -fplugin=GHC.TypeLits.KnownNat.Solver #-}
 {-# OPTIONS_GHC -fplugin=GHC.TypeLits.Normalise #-}
 
 module Clash.Tests.Aiger.BitVector (tests, main) where
 
-import GHC.TypeNats (KnownNat, SomeNat (..), natVal, someNatVal)
 import Test.Tasty
 import Test.Tasty.HUnit
 
-import Clash.Aiger.BitVector
-import Clash.Sized.Internal.BitVector (Bit, BitVector (..))
+import Clash.Aiger.BitVector hiding (n)
+import Clash.Sized.Internal.BitVector (Bit)
+import Clash.Tests.Aiger.TH
 
 import qualified Clash.Sized.Internal.BitVector as BV
 
@@ -30,52 +25,39 @@ genTruthTableTests f oo oi io ii =
 
 tests :: TestTree
 tests =
-  localOption (Q.QuickCheckMaxRatio 2) $
-    testGroup
-      "All"
-      [ testGroup
-          "Truth tables"
-          [ testGroup "or##" $ genTruthTableTests or## 0 1 1 1
-          , testGroup "xor##" $ genTruthTableTests xor## 0 1 1 0
-          , testGroup "eq##" $ genTruthTableTests eq## True False False True
-          , testGroup "neq##" $ genTruthTableTests neq## False True True False
-          , testGroup "lt##" $ genTruthTableTests lt## False True False False
-          , testGroup "le##" $ genTruthTableTests le## True True False True
-          , testGroup "gt##" $ genTruthTableTests gt## False False True False
-          , testGroup "ge##" $ genTruthTableTests ge## True False True True
-          ]
-          -- , testGroup
-          --     "BitVector logic"
-          --     [ testCase "and#" $ test1 0b00000000 @?= 0
-          --     , testCase "or#" $ test1 0b00000000 @?= 0
-          --     , testCase "xor#" $ test1 0b00000000 @?= 0
-          --     , testCase "neq#" $ test1 0b00000000 @?= 0
-          --     , testCase "eq#" $ test1 0b00000000 @?= 0
-          --     , testCase "lt#" $ test1 0b00000000 @?= 0
-          --     , testCase "le#" $ test1 0b00000000 @?= 0
-          --     , testCase "gt#" $ test1 0b00000000 @?= 0
-          --     , testCase "ge#" $ test1 0b00000000 @?= 0
-          --     ]
-          -- , testGroup
-          --     "BitVector manipulation"
-          --     [ testCase "reduceAnd#" $ test1 0b01111111 @?= 0
-          --     , testCase "reduceOr#" $ test1 0b01111111 @?= 0
-          --     , testCase "reduceXor#" $ test1 0b01100000 @?= 0
-          --     , testCase "msb#" $ test1 0b11111101 @?= 2
-          --     , testCase "lsb#" $ test1 0b11100001 @?= 2
-          --     , testCase "shiftL#" $ test1 0b11111110 @?= 3
-          --     , testCase "shiftR#" $ test1 0b11111111 @?= 4
-          --     , testCase "rotateL#" $ test1 0b11010110 @?= 9
-          --     , testCase "rotateR#" $ test1 0b11010110 @?= 9
-          --     ]
-          -- , testGroup
-          --     "BitVector arithmetic"
-          --     [ testCase "negate#" $ test1 0b11010110 @?= 9
-          --     , testCase "+#" $ test1 0b11010110 @?= 9
-          --     , testCase "-#" $ test1 0b11010110 @?= 9
-          --     , testCase "*#" $ test1 0b11010110 @?= 9
-          --     ]
-      ]
+  testGroup
+    "AIGER: Bit & BitVector"
+    [ testGroup "or##" $ genTruthTableTests or## 0 1 1 1
+    , testGroup "xor##" $ genTruthTableTests xor## 0 1 1 0
+    , testGroup "eq##" $ genTruthTableTests eq## True False False True
+    , testGroup "neq##" $ genTruthTableTests neq## False True True False
+    , testGroup "lt##" $ genTruthTableTests lt## False True False False
+    , testGroup "le##" $ genTruthTableTests le## True True False True
+    , testGroup "gt##" $ genTruthTableTests gt## False False True False
+    , testGroup "ge##" $ genTruthTableTests ge## True False True True
+    , testGroup "and#" $(genTests 'and# 'BV.and#)
+    , testGroup "or#" $(genTests 'or# 'BV.or#)
+    , testGroup "xor#" $(genTests 'xor# 'BV.xor#)
+    , testGroup "neq#" $(genTests 'neq# 'BV.neq#)
+    , testGroup "eq#" $(genTests 'eq# 'BV.eq#)
+    , testGroup "lt#" $(genTests 'lt# 'BV.lt#)
+    , testGroup "le#" $(genTests 'le# 'BV.le#)
+    , testGroup "gt#" $(genTests 'gt# 'BV.gt#)
+    , testGroup "ge#" $(genTests 'ge# 'BV.ge#)
+    , testGroup "reduceAnd#" $(genTests 'reduceAnd# 'BV.reduceAnd#)
+    , testGroup "reduceOr#" $(genTests 'reduceOr# 'BV.reduceOr#)
+    , testGroup "reduceXor#" $(genTests 'reduceXor# 'BV.reduceXor#)
+    , testGroup "msb#" $(genTests 'msb# 'BV.msb#)
+    , testGroup "lsb#" $(genTests 'lsb# 'BV.lsb#)
+    , testGroup "shiftL#" $(genTests 'shiftL# 'BV.shiftL#)
+    , testGroup "shiftR#" $(genTests 'shiftR# 'BV.shiftR#)
+    , testGroup "rotateL#" $(genTests 'rotateL# 'BV.rotateL#)
+    , testGroup "rotateR#" $(genTests 'rotateR# 'BV.rotateR#)
+    , testGroup "negate#" $(genTests 'negate# 'BV.negate#)
+    , testGroup "+#" $(genTests '(+#) '(BV.+#))
+    , testGroup "-#" $(genTests '(-#) '(BV.-#))
+    , testGroup "*#" $(genTests '(*#) '(BV.*#))
+    ]
 
 -- Run with:
 --
