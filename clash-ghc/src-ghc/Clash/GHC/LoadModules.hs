@@ -31,7 +31,7 @@ where
 #endif
 
 -- External Modules
-import           Clash.Annotations.Primitive     (HDL, PrimitiveGuard(..))
+import           Clash.Annotations.Primitive     (HDL (AIGER), PrimitiveGuard(..))
 import           Clash.Annotations.TopEntity     (TopEntity (..))
 import           Clash.Primitives.Types          (UnresolvedPrimitive)
 import           Clash.Util                      (ClashException(..), pkgIdFromTypeable)
@@ -647,7 +647,9 @@ loadModules startAction useColor hdl modName dflagsM idirs = do
     benchAnn   <- findTestBenches rootIds
     reprs'     <- findCustomReprAnnotations
     primGuards <- findPrimitiveGuardAnnotations allBinderIds
-    aigerSubs <- findAigerSubstitutionAnnotations allBinderIds
+    aigerSubs <- case hdl of
+      AIGER -> findAigerSubstitutionAnnotations allBinderIds
+      _ -> pure []
     aigerSubstitutes <- generateAigerSubstitutionMap aigerSubs
     let
       -- All binders synthesized with Synthesize, all binders annotated with
