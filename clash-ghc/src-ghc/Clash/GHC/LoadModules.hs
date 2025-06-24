@@ -646,10 +646,12 @@ loadModules startAction useColor hdl modName dflagsM idirs = do
     topSyn     <- map fst <$> findSynthesizeAnnotations rootIds
     benchAnn   <- findTestBenches rootIds
     reprs'     <- findCustomReprAnnotations
-    primGuards <- findPrimitiveGuardAnnotations allBinderIds
     aigerSubs <- case hdl of
       AIGER -> findAigerSubstitutionAnnotations allBinderIds
       _ -> pure []
+    let exclude things from = filter (\a -> not $ elem a things) from
+    let allBinderIdsWithoutSubstitution = exclude (fst $ unzip aigerSubs) allBinderIds
+    primGuards <- findPrimitiveGuardAnnotations allBinderIdsWithoutSubstitution
     aigerSubstitutes <- generateAigerSubstitutionMap aigerSubs
     let
       -- All binders synthesized with Synthesize, all binders annotated with
