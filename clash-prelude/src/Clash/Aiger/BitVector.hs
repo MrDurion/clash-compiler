@@ -9,9 +9,10 @@ module Clash.Aiger.BitVector where
 import GHC.TypeLits (KnownNat)
 
 import Clash.Aiger.Util
-import {-# SOURCE #-} Clash.Class.BitPack.Internal (bitToBool)
+import Clash.Annotations.Primitive (hasBlackBox)
 import {-# SOURCE #-} Clash.Sized.Internal.BitVector (Bit, BitVector)
 
+import {-# SOURCE #-} qualified Clash.Class.BitPack.Internal as BP
 import {-# SOURCE #-} qualified Clash.Sized.Internal.BitVector as BV
 
 all1BV :: (KnownNat n) => BitVector n
@@ -249,3 +250,8 @@ n = BV.complement##
 
 (&) :: Bit -> Bit -> Bit
 (&) = BV.and##
+
+{-# ANN bitToBool hasBlackBox #-}
+{-# NOINLINE bitToBool #-}
+bitToBool :: Bit -> Bool
+bitToBool b = BP.bitToBool b
