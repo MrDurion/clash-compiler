@@ -367,7 +367,9 @@ loadAnnotationsM ::
 loadAnnotationsM hdl modName iface = do
   anns <- lift (runIfl modName (TcIface.tcIfaceAnnotations (GHC.mi_anns iface)))
   -- FIXME 
-  loadAigerSubstitutionAnnotations anns 
+  case hdl of 
+    AIGER -> loadAigerSubstitutionAnnotations anns 
+    _ -> pure ()
   -- END FIXME
   primFPs <- loadPrimitiveAnnotations hdl anns
   let reprs = loadCustomReprAnnotations anns
