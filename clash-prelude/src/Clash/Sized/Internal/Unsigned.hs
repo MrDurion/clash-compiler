@@ -564,12 +564,14 @@ instance KnownNat n => Bits (Unsigned n) where
   popCount u        = popCount (pack# u)
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN and# (aigerSubstitution 'Clash.Aiger.Unsigned.and#) #-}
 {-# CLASH_OPAQUE and# #-}
 {-# ANN and# hasBlackBox #-}
 and# :: Unsigned n -> Unsigned n -> Unsigned n
 and# (U v1) (U v2) = U (v1 .&. v2)
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN or# (aigerSubstitution 'Clash.Aiger.Unsigned.or#) #-}
 {-# CLASH_OPAQUE or# #-}
 {-# ANN or# hasBlackBox #-}
 or# :: Unsigned n -> Unsigned n -> Unsigned n
@@ -583,6 +585,7 @@ xor# :: KnownNat n => Unsigned n -> Unsigned n -> Unsigned n
 xor# (U v1) (U v2) = U (v1 `xor` v2)
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN complement# (aigerSubstitution 'Clash.Aiger.Unsigned.complement#) #-}
 {-# CLASH_OPAQUE complement# #-}
 {-# ANN complement# hasBlackBox #-}
 complement# :: forall n . KnownNat n => Unsigned n -> Unsigned n

@@ -3,48 +3,111 @@
 module Clash.Backend.Aiger (AigerState) where
 
 import Clash.Annotations.Primitive (HDL (..))
-import Control.Lens
+import Control.Lens (use, (+=), (.=), (^.))
+import Control.Lens.TH (makeLenses)
+import Control.Lens.Tuple (_1)
+import Control.Monad.Extra (concatMapM)
 import Control.Monad.State (State)
 import Data.HashSet (HashSet)
+import Data.List ((!?))
 import Data.Monoid (Ap (..))
+import Data.Text (Text)
+import Debug.Trace (trace, traceM)
+import GHC.Data.Maybe (orElse)
+import GHC.Num (integerToInt)
+import Prelude hiding (lookup)
 
+import qualified Data.Map as Map
 import qualified Data.Text as TextS
 import qualified Data.Text.Lazy as LT
 import qualified System.FilePath
 
-import Clash.Backend hiding (Usage)
+import Clash.Backend (
+  AggressiveXOptBB (..),
+  Backend,
+  DomainMap,
+  HWKind (..),
+  HasUsageMap,
+  ModName,
+  RenderEnums (..),
+  emptyDomainMap,
+  primsRoot,
+ )
 import Clash.Driver.Types (ClashOpts)
 import Clash.Netlist.BlackBox.Types (HdlSyn)
-import Clash.Netlist.Types (Usage)
-import Clash.Netlist.Types hiding (Literal, Usage)
+import Clash.Netlist.Id (toText)
+import Clash.Netlist.Types (
+  BlackBoxContext (..),
+  Component (..),
+  Declaration (..),
+  Expr (..),
+  HWType (..),
+  HasIdentifierSet (..),
+  Identifier (..),
+  IdentifierSet,
+  Literal (..),
+  UsageMap, Modifier (..),
+ )
 import Clash.Netlist.Util (typeSize)
-import Clash.Util
-import Data.Text.Prettyprint.Doc.Extra
+import Clash.Util (SrcSpan)
+import Data.Text.Prettyprint.Doc.Extra (
+  Doc,
+  emptyDoc,
+  line,
+  pretty,
+  vcat,
+ )
 
 import qualified Clash.Backend
 import qualified Clash.Netlist.Id as Id
 
 type BUsage = Clash.Backend.Usage
 
-class RelatedIdentifier s where
-  bitIndex :: s -> Int
-  identifier :: s -> Identifier
+data AigerIndex = AigerIndex Int Bool
+toInt :: AigerIndex -> Int
+toInt (AigerIndex i b) = (i * 2) + if b then 1 else 0
 
-data InputNode = InputNode Identifier Int Int
-data OutputNode = OutputNode Identifier Int (Maybe Int)
+complement :: AigerIndex -> AigerIndex
+complement (AigerIndex i b) = AigerIndex i (not b)
 
-instance RelatedIdentifier InputNode where
-  bitIndex (InputNode _ b _) = b
-  identifier (InputNode i _ _) = i
+instance Show AigerIndex where
+  show ai = show $ toInt ai
 
-instance RelatedIdentifier OutputNode where
-  bitIndex (OutputNode _ b _) = b
-  identifier (OutputNode i _ _) = i
+instance Eq AigerIndex where
+  (==) a b = (toInt a) == (toInt b)
+
+instance Ord AigerIndex where
+  (<=) a b = (toInt a) <= (toInt b)
+
+data AigerPointer = Pointer Text deriving (Ord, Eq)
+
+instance Show AigerPointer where
+  show (Pointer i) = show i
+
+data InputNode = InputNode AigerIndex deriving (Show)
+data OutputNode = OutputNode AigerIndex deriving (Show)
+data AndNode = AndNode AigerIndex AigerIndex AigerIndex deriving (Show)
+
+data UnsolvedAndNode = UnsolvedAndNode AigerIndex AigerExpr AigerExpr
+  deriving (Show)
+
+data AigerExpr
+  = Id AigerPointer
+  | Concat [AigerExpr]
+  | Range Int Int AigerExpr
+  | And AigerIndex
+  | Complement AigerExpr
+  | BitRange [AigerIndex]
+  | Empty
+  deriving (Show)
 
 data AigerState = AigerState
   { _maxIndex :: Int
   , _inputNodes :: [InputNode]
   , _outputNodes :: [OutputNode]
+  , _andNodes :: [AndNode]
+  , _unsolvedAndNodes :: [UnsolvedAndNode]
+  , _aigerExpressions :: Map.Map AigerPointer AigerExpr
   }
 
 makeLenses ''AigerState
@@ -57,8 +120,17 @@ instance HasUsageMap AigerState where
 
 type AigerM = Ap (State AigerState)
 
-instance Backend AigerState where -- \| Initial state for state monad
-  initBackend _opts = AigerState{_maxIndex = 0, _inputNodes = [], _outputNodes = []}
+instance Backend AigerState where
+  -- \| Initial state for state monad
+  initBackend _opts =
+    AigerState
+      { _maxIndex = 1
+      , _inputNodes = []
+      , _outputNodes = []
+      , _andNodes = []
+      , _unsolvedAndNodes = []
+      , _aigerExpressions = Map.insert (Pointer $ TextS.pack "__VOID__") Empty mempty
+      }
 
   -- \| What HDL is the backend generating
   hdlKind :: AigerState -> HDL
@@ -68,7 +140,7 @@ instance Backend AigerState where -- \| Initial state for state monad
   primDirs :: AigerState -> IO [FilePath]
   primDirs = const $ do
     root <- primsRoot
-    return [root System.FilePath.</> "aiger", root System.FilePath.</> "common"]
+    return [root System.FilePath.</> "aiger"]
 
   -- \| Name of backend, used for directory to put output files in. Should be
   --   constant function / ignore argument.
@@ -77,7 +149,7 @@ instance Backend AigerState where -- \| Initial state for state monad
 
   -- \| File extension for target langauge
   extension :: AigerState -> String
-  extension = const "aig"
+  extension = const "aag"
 
   -- \| Get the set of types out of AigerState
   extractTypes :: AigerState -> HashSet HWType
@@ -108,7 +180,12 @@ instance Backend AigerState where -- \| Initial state for state monad
   -- FIXME define the types for each HWType in AIGER
   -- \| Query what kind of type a given HDL type is
   hdlHWTypeKind :: HWType -> State AigerState HWKind
-  hdlHWTypeKind _ = pure PrimitiveType
+  hdlHWTypeKind h =
+    pure
+      ( case h of
+          Bit -> PrimitiveType
+          _ -> UserType
+      )
 
   -- \| Convert a Netlist HWType to an HDL error value for that type
   hdlTypeErrValue :: HWType -> AigerM Doc
@@ -141,7 +218,16 @@ instance Backend AigerState where -- \| Initial state for state monad
     Expr ->
     -- \^ Expr to convert
     AigerM Doc
-  expr _ _ = emptyDoc
+  expr _ e = case e of
+    Identifier id_ _ -> pretty id_
+    Literal _ a -> pretty (show a)
+    DataCon{} -> pretty "DataCon"
+    DataTag{} -> pretty "DataTag"
+    BlackBoxE{} -> pretty "BlackBox"
+    ToBv{} -> pretty "ToBv"
+    FromBv{} -> pretty "FromBv"
+    IfThenElse{} -> pretty "IfThenElse"
+    Noop -> pretty "Noop"
 
   -- \| Bit-width of Int,Word,Integer
   iwWidth :: State AigerState Int
@@ -230,6 +316,280 @@ instance Backend AigerState where -- \| Initial state for state monad
   setDomainConfigurations :: DomainMap -> AigerState -> AigerState
   setDomainConfigurations _ a = a
 
+getOutputNodes :: AigerM [OutputNode]
+getOutputNodes = do
+  Ap $ use outputNodes
+getInputNodes :: AigerM [InputNode]
+getInputNodes = do
+  Ap $ use inputNodes
+getAndNodes :: AigerM [AndNode]
+getAndNodes = do
+  Ap $ use andNodes
+addInputNode :: InputNode -> AigerM ()
+addInputNode inpN = do
+  ins <- getInputNodes
+  Ap $ inputNodes .= inpN : ins
+addOutputNode :: OutputNode -> AigerM ()
+addOutputNode outN = do
+  outs <- getOutputNodes
+  Ap $ outputNodes .= outN : outs
+
+addAndNode :: AndNode -> AigerM ()
+addAndNode aN = do
+  ans <- getAndNodes
+  Ap $ andNodes .= aN : ans
+
+getUnsolvedAndNodes :: AigerM [UnsolvedAndNode]
+getUnsolvedAndNodes = do
+  Ap $ use unsolvedAndNodes
+
+addUnsolvedAndNodes :: UnsolvedAndNode -> AigerM ()
+addUnsolvedAndNodes n = do
+  ns <- getUnsolvedAndNodes
+  Ap $ unsolvedAndNodes .= n : ns
+
+getMaxIndex :: AigerM Int
+getMaxIndex = Ap $ use maxIndex
+
+getNumInputs :: AigerM Int
+getNumInputs = do
+  Ap $ length <$> (use inputNodes)
+
+getNumOutputs :: AigerM Int
+getNumOutputs = do
+  Ap $ length <$> (use outputNodes)
+
+getNumAndGates :: AigerM Int
+getNumAndGates = do
+  Ap $ length <$> (use andNodes)
+
+getNewIndex :: AigerM AigerIndex
+getNewIndex = do
+  i <- getMaxIndex
+  Ap $ maxIndex += 1
+  pure (AigerIndex i False)
+
+getAssignments :: AigerM (Map.Map AigerPointer AigerExpr)
+getAssignments = do
+  Ap $ use aigerExpressions
+
+addAssignment :: AigerPointer -> AigerExpr -> AigerM ()
+addAssignment ap aa = do
+  assignm <- getAssignments
+  let newass = Map.insert ap aa assignm
+  Ap $ aigerExpressions .= newass
+  pure ()
+
+getAigerExpr :: AigerPointer -> AigerM AigerExpr
+getAigerExpr ap = do
+  assignm <- getAssignments
+  let mae = Map.lookup ap assignm
+  let ae =
+        mae
+          `orElse` error
+            ( "could not find aigerExprression "
+                ++ show ap
+                ++ " in \n"
+                ++ (unlines $ map show $ Map.assocs assignm)
+            )
+  pure ae
+
+getIndeces :: AigerExpr -> AigerM [AigerIndex]
+getIndeces expr =
+  case expr of
+    Id i1 -> do
+      aigerExprs <- getAigerExpr i1
+      i <- getIndeces aigerExprs
+      -- traceM $ "For Id (" ++ show aigerExprs ++ ") we got " ++ show i
+      pure i
+    Concat es -> do
+      concatMapM getIndeces es
+    Range start end e1 -> do
+      i1 <- getIndeces e1
+      pure $ drop start (take (end) i1)
+    And ind -> do
+      pure [ind]
+    Complement i1 -> do
+      aigerIndeces <- getIndeces i1
+      -- traceM $ "For (" ++ show i1 ++ ") we got " ++ show aigerIndeces
+      pure $ map complement aigerIndeces
+    BitRange bs -> do
+      pure bs
+    Empty -> do
+      pure []
+
+convertExprToAigerExpr :: Expr -> AigerM AigerExpr
+convertExprToAigerExpr e = case e of
+  (Identifier eI Nothing) -> pure $ Id (Pointer (toText eI))
+  (Identifier eI (Just a)) -> pure $ modifier (Pointer (toText eI)) a
+  (Literal _ _) -> trace ("TODO found " ++ show e) $ pure Empty
+  (DataCon hwt _ ex) -> parseDataConE hwt ex
+  (DataTag _ _) -> trace ("TODO found " ++ show e) $ pure Empty
+  (BlackBoxE n _ _ _ _ templateContext _) -> parseBlackBoxE n templateContext
+  (ToBv _ _ e1) -> convertExprToAigerExpr e1
+  (FromBv _ _ e1) -> convertExprToAigerExpr e1
+  (IfThenElse _ _ _) -> trace ("TODO found " ++ show e) $ pure Empty
+  (Noop) -> trace "TODO found Noop" $ pure Empty
+
+modifier :: AigerPointer -> Modifier -> AigerExpr
+modifier (Id -> pointer) m = case m of
+  Indexed (Product _ _ hwts, _, ft) -> Range start end pointer
+   where
+    frontHWT = take (ft) hwts
+    frontSize = sum $ map typeSize frontHWT
+    currentHWT = hwts !! ft
+    currentSize = typeSize currentHWT
+    start = frontSize 
+    end = start + currentSize
+    
+
+  Sliced (_, s, end) -> Range s end pointer
+  _ -> pointer
+  
+
+printExpr :: Expr -> String
+printExpr e = case e of
+  (Identifier eI mm) -> show (toText eI) ++ "[" ++ show mm ++ "]"
+  (Literal _ l) -> "Lit(" ++ show l ++ ")"
+  (DataCon hwt _ ex) ->
+    "DataCon ("
+      ++ head (words (show hwt))
+      ++ ") {"
+      ++ (unwords $ map printExpr ex)
+      ++ "}"
+  (DataTag _ _) -> "DataTag ?"
+  (BlackBoxE n _ _ _ _ th _) ->
+    show n
+      ++ " ["
+      ++ (unwords $ map (\(a, _, _) -> "(" ++ printExpr a ++ ")") (bbInputs th))
+      ++ "]"
+  (ToBv _ _ e1) -> printExpr e1
+  (FromBv _ _ e1) -> printExpr e1
+  (IfThenElse a b c) ->
+    "If ("
+      ++ printExpr a
+      ++ ") then ("
+      ++ printExpr b
+      ++ ") else ("
+      ++ printExpr c
+      ++ ")"
+  (Noop) -> "Noop"
+
+parseDataConE :: HWType -> [Expr] -> AigerM AigerExpr
+parseDataConE h es = do
+  case h of
+    Product{} -> do
+      aes <- mapM convertExprToAigerExpr es
+      pure $ Concat aes
+    Bit -> case es of
+      [e] -> convertExprToAigerExpr e
+      _ -> error "Multiple expressions in Bit DataCon"
+    l -> error ("no parser implemented yet for DataCon " ++ show l)
+
+parseBlackBoxE :: Text -> BlackBoxContext -> AigerM AigerExpr
+parseBlackBoxE n context =
+  -- FIXME oh no!
+  ( case (show n) of
+      "\"Clash.Sized.Internal.BitVector.++#\"" -> do
+        id1 <- getExpr 1
+        id1E <- convertExprToAigerExpr id1
+        id2 <- getExpr 2
+        id2E <- convertExprToAigerExpr id2
+        pure $ Concat [id1E, id2E]
+      "\"Clash.Sized.Internal.BitVector.split#\"" -> do
+        -- nat0 <- getNatLit 0
+        id1 <- getExpr 1
+        id1E <- convertExprToAigerExpr id1
+        pure $ id1E
+      -- "\"Clash.Aiger.Util.firstBV\"" -> do
+      --   -- o0 <- getNatLit 0
+      --   n0 <- getNatLit 1
+      --   id2 <- getExpr 2
+      --   id2E <- convertExprToAigerExpr id2
+      --   pure $ Range 0 n0 id2E
+      -- "\"Clash.Aiger.Util.lastBV\"" -> do
+      --   o0 <- getNatLit 0
+      --   n0 <- getNatLit 1
+      --   id2 <- getExpr 2
+      --   id2E <- convertExprToAigerExpr id2
+      --   pure $ Range o0 (n0) id2E
+      "\"Clash.Sized.Internal.BitVector.unpack#\"" -> do
+        id0 <- getExpr 0
+        convertExprToAigerExpr id0
+      "\"Clash.Sized.Internal.BitVector.pack#\"" -> do
+        id0 <- getExpr 0
+        convertExprToAigerExpr id0
+      "\"Clash.Sized.Internal.Unsigned.unpack#\"" -> do
+        id0 <- getExpr 1
+        convertExprToAigerExpr id0
+      "\"Clash.Sized.Internal.Unsigned.pack#\"" -> do
+        id0 <- getExpr 0
+        convertExprToAigerExpr id0
+      "\"Clash.Sized.Internal.BitVector.and##\"" -> do
+        id0 <- getExpr 0
+        id0E <- convertExprToAigerExpr id0
+        id1 <- getExpr 1
+        id1E <- convertExprToAigerExpr id1
+        index <- getNewIndex
+        addUnsolvedAndNodes $ UnsolvedAndNode index id0E id1E
+        pure $ And index
+      "\"Clash.Sized.Internal.BitVector.complement##\"" -> do
+        id0 <- getExpr 0
+        id0E <- convertExprToAigerExpr id0
+        pure $ Complement id0E
+      "\"Clash.Sized.Internal.BitVector.low\"" -> do
+        pure $ BitRange [(AigerIndex 0 False)]
+      "\"Clash.Sized.Internal.BitVector.high\"" -> do
+        pure $ BitRange [(AigerIndex 0 True)]
+      "\"Clash.Aiger.Util.all0BV\"" -> do
+        n0 <- getNatLit 0
+        pure $ BitRange (replicate n0 (AigerIndex 0 False))
+      _ -> trace ("could not parse " ++ show n) $ pure Empty
+  )
+ where
+  getExpr :: Int -> AigerM Expr
+  getExpr i = do
+    inp <- pure $ bbInputs context
+    pure $ (^. _1) (inp !! i)
+
+  getNatLit :: Int -> AigerM Int
+  getNatLit i = do
+    e <- getExpr i
+    case (e) of
+      Literal _ (NumLit ii) -> pure (integerToInt ii)
+      DataCon _ _ ((Literal _ (NumLit ii)) : _) -> pure (integerToInt ii)
+      l ->
+        error $
+          "could not find literal in " ++ show n ++ ", found " ++ show (l)
+
+parseDeclaration :: Declaration -> AigerM ()
+parseDeclaration d = do
+  case d of
+    (Assignment i _ e) -> do parseAssignment (Pointer (toText i)) e
+    (CondAssignment _ _ _ _ _) -> trace ("DECL: " ++ show d) $ pure ()
+    (InstDecl _ _ _ _ _ _ _) -> trace ("DECL: " ++ show d) $ pure ()
+    (BlackBoxD n _ _ _ _ t) -> (parseBlackBoxD n t)
+    (CompDecl _ _) -> trace ("DECL: " ++ show d) $ pure ()
+    (NetDecl' _ _ _ _) -> pure ()
+    (TickDecl _) -> trace ("DECL: " ++ show d) $ pure ()
+    (Seq _) -> trace ("DECL: " ++ show d) $ pure ()
+    (ConditionalDecl _ _) -> trace ("DECL: " ++ show d) $ pure ()
+ where
+  parseBlackBoxD n t = do
+    aigerExpr <- parseBlackBoxE n t
+    let r = bbResults t
+        i = case r of
+          (((Identifier ii _), _) : _) -> Pointer (toText ii)
+          _ -> error "Result of blackboxD not an identifier"
+    addAssignment i aigerExpr
+
+    pure ()
+  parseAssignment i e = do
+    traceM $ show i ++ " = " ++ printExpr e
+    aigerExpr <- convertExprToAigerExpr e
+    -- traceM $ "------------------" ++ show i ++ " = " ++ show aigerExpr
+    addAssignment i aigerExpr
+
 genAIGER ::
   ClashOpts ->
   ModName ->
@@ -239,102 +599,147 @@ genAIGER ::
   Component ->
   AigerM ((String, Doc), [(String, Doc)])
 genAIGER _ _ _ _ _ c = do
-  v <- (componentToAiger c <> line <> commentBlock)
+  v <- componentToAiger c
   return ((TextS.unpack (Id.toText cname), v), [])
  where
   cname = componentName c
-  cmmt = ""
-  commentBlock = if cmmt == "" then emptyDoc else (pretty "c" <> line <> pretty cmmt)
 
--- FIXME
+componentToState :: Component -> AigerM ()
+componentToState c = do
+  let decls = declarations c
+  saveInputs c
+  _ <- mapM parseDeclaration $ decls
+  saveAnds
+  saveOutputs c
+
 componentToAiger :: Component -> AigerM Doc
 componentToAiger c = do
-  saveInputs c
-  _ <- mapM parseDeclaration $ declarations c
+  componentToState c
 
-  i <- Ap $ use inputNodes
-  let numInputs = length i
-  mInd <- Ap $ use maxIndex
-  let headerLine =
-        pretty $
-          "aag "
-            <> show mInd
-            <> " "
-            <> show numInputs
-            <> " "
-            <> show numLatches
-            <> " "
-            <> show numOutputs
-            <> " "
-            <> show numAndGates
-
-  (headerLine <> line <> writeInputs <> writeOutputs <> line <> symbolTable)
- where
-  numLatches = 0 :: Int
-  numOutputs = sum $ map typeSize $ map (\(_, a, _) -> snd a) $ outputs c
-  numAndGates = 0 :: Int
-  symbolTable = emptyDoc -- pretty $ show $ declarations c
-
-getIndex :: AigerM Int
-getIndex = Ap $ use maxIndex
-
-getNewIndex :: AigerM Int
-getNewIndex = do
-  i <- getIndex
-  Ap $ maxIndex += 1
-  pure i
-
-saveInput :: (Identifier, HWType) -> AigerM ()
-saveInput (ident, hwtype) = do
-  innotes <- Ap $ use inputNodes
-  newInputNodes <-
-    mapM
-      ( \i ->
-          ( do
-              newIndex <- getNewIndex
-              pure $ InputNode ident i newIndex
+  traceM ""
+  traceState
+  -- The graph has been parsed and now we generate the file from the aigerM State
+  numInputs <- getNumInputs
+  numOutputs <- getNumOutputs
+  numAndGates <- getNumAndGates
+  mInd <- getMaxIndex
+  let header =
+        pretty
+          ( "aag "
+              <> show (mInd - 1)
+              <> " "
+              <> show numInputs
+              <> " "
+              <> show numLatches
+              <> " "
+              <> show numOutputs
+              <> " "
+              <> show numAndGates
           )
-      )
-      [0 .. amount]
-  Ap $ inputNodes .= (innotes ++ newInputNodes)
-  pure ()
- where
-  amount = typeSize hwtype
 
+  header
+    <> writeInputs
+    <> writeOutputs
+    <> writeAnds
+    <> symbolTable
+    <> commentBlock Nothing
+ where
+  numLatches = 0 :: Int -- TODO
+  symbolTable = emptyDoc
+  commentBlock :: Maybe String -> AigerM Doc
+  commentBlock cmmt = case cmmt of
+    Just cmt -> pretty "c" <> line <> pretty cmt
+    Nothing -> emptyDoc
+
+traceState :: AigerM ()
+traceState = do
+  ass <- getAssignments
+  traceM "assignments"
+  traceM (unlines $ map (\(i, a) -> show i ++ " = " ++ show a) $ Map.assocs ass)
+  traceM "End trace"
+  pure ()
+
+-- Saving netlist to state
 saveInputs :: Component -> AigerM ()
 saveInputs c = do
+  let i = inputs c
   _ <- mapM saveInput i
   pure ()
  where
-  i = inputs c
+  saveInput (ident, hwtype) = do
+    let aigerPointer = (Pointer (toText ident))
+    indeces <- mapM (go) [0 .. amount - 1]
+    addAssignment aigerPointer (BitRange indeces)
+    pure ()
+   where
+    amount = typeSize hwtype
+    go _ = do
+      i <- getNewIndex
+      addInputNode (InputNode i)
+      pure i
+
+saveOutputs :: Component -> AigerM ()
+saveOutputs c = do
+  let o = outputs c
+  _ <- mapM saveOutput o
+  pure ()
+ where
+  saveOutput (_, (ident, _), maybeExpr) = do
+    expr <- case maybeExpr of
+      Just e -> convertExprToAigerExpr e
+      Nothing -> getAigerExpr (Pointer (toText ident))
+    indeces <- getIndeces expr
+    traceM $ "For output " ++ show (toText ident) ++ " we got " ++ show indeces
+    _ <- mapM (addON) indeces
+    pure ()
+   where
+    addON i = do
+      addOutputNode (OutputNode i)
+
+saveAnds :: AigerM ()
+saveAnds = do
+  ands <- getUnsolvedAndNodes
+  _ <- mapM go ands
+  pure ()
+ where
+  go (UnsolvedAndNode ai ap1 ap2) = do
+    ail <- getIndex ap1 0
+    air <- getIndex ap2 0
+    addAndNode $ AndNode ai ail air
+  getIndex ap i = do
+    indeces <- getIndeces ap
+    pure $ indeces !? i `orElse` error "OutofBounds with getIndex"
+
+-- Writing state
+
+writeOutput :: OutputNode -> AigerM Doc
+writeOutput (OutputNode ref) = pretty $ toInt ref
+
+writeOutputs :: AigerM (Doc)
+writeOutputs = do
+  i <- getOutputNodes
+  n <- getNumOutputs
+  if n == 0 then emptyDoc else (line <> (vcat $ mapM writeOutput i))
 
 writeInput :: InputNode -> AigerM Doc
-writeInput (InputNode _ _ i) = pretty i
+writeInput (InputNode i) = pretty $ toInt i
 
 writeInputs :: AigerM Doc
 writeInputs = do
-  i <- Ap $ use inputNodes
-  vcat $ mapM writeInput i
+  i <- getInputNodes
+  n <- getNumInputs
+  if n == 0 then emptyDoc else (line <> (vcat $ mapM writeInput i))
 
-assignmentIdentifierToIdentifier :: Identifier -> Identifier -> AigerM ()
-assignmentIdentifierToIdentifier i i2 = pure ()
+writeAnd :: AndNode -> AigerM Doc
+writeAnd (AndNode ref l r) =
+  pretty (toInt ref)
+    <> pretty " "
+    <> pretty (toInt l)
+    <> pretty " "
+    <> pretty (toInt r)
 
-parseAssignmentDeclaration :: Identifier -> Usage -> Expr -> AigerM ()
-parseAssignmentDeclaration i u e = case e of
-  Identifier rI mM -> assignmentIdentifierToIdentifier i rI
-  _ -> pure ()
-
-parseDeclaration :: Declaration -> AigerM ()
-parseDeclaration d = case d of
-  Assignment i u e -> parseAssignmentDeclaration i u e
-  _ -> pure ()
-
-writeOutput :: OutputNode -> AigerM Doc
-writeOutput (OutputNode _ _ ref) = case ref of
-  Just ind -> pretty ind
-  _ -> emptyDoc
-
-writeOutputs :: AigerM Doc
-writeOutputs = do
-  o <- Ap $ use outputNodes
-  vcat $ mapM writeOutput o
+writeAnds :: AigerM (Doc)
+writeAnds = do
+  i <- getAndNodes
+  n <- getNumAndGates
+  if n == 0 then emptyDoc else (line <> (vcat $ mapM writeAnd i))

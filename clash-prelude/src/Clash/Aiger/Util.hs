@@ -1,16 +1,36 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE RankNTypes #-}
 {-# OPTIONS_GHC -fplugin GHC.TypeLits.KnownNat.Solver #-}
 {-# OPTIONS_GHC -fplugin GHC.TypeLits.Normalise #-}
 
 module Clash.Aiger.Util where
 
-import GHC.TypeLits (KnownNat, type (-), type (<=))
+import GHC.TypeLits (KnownNat, type (+), type (-), type (<=))
 
+import Clash.Annotations.Primitive (hasBlackBox)
 import Clash.Promoted.Nat (SNat (..), SNatLE (..), compareSNat)
 import {-# SOURCE #-} Clash.Sized.Internal.BitVector (Bit, BitVector)
 
 import {-# SOURCE #-} qualified Clash.Sized.Internal.BitVector as BV
 
+-- {-# ANN lastBV hasBlackBox #-}
+-- -- {-# NOINLINE lastBV #-}
+-- {-# CLASH_OPAQUE lastBV #-}
+-- lastBV ::
+--   forall n o. (KnownNat n, KnownNat o) => BitVector (n + o) -> BitVector (o)
+-- lastBV bv = s
+--  where
+--   (_ :: BitVector (n), s :: BitVector o) = BV.split# bv
+--
+-- {-# ANN firstBV hasBlackBox #-}
+-- -- {-# NOINLINE firstBV #-}
+-- {-# CLASH_OPAQUE firstBV #-}
+-- firstBV ::
+--   forall o n. (KnownNat o, KnownNat n) => BitVector (n + o) -> BitVector (n)
+-- firstBV bv = s
+--  where
+--   (s :: BitVector (n), _ :: BitVector o) = BV.split# bv
+--
 maybeBV ::
   forall n d.
   (KnownNat n) =>
@@ -25,6 +45,8 @@ destructBV ::
   forall n. (KnownNat n, 1 <= n) => BitVector n -> (Bit, BitVector (n - 1))
 destructBV bv = (bit, bs)
  where
+  -- bs :: BitVector (n - 1) = lastBV @1 bv
+  -- b :: BitVector (1) = firstBV @(n - 1) bv
   (b :: BitVector 1, bs :: BitVector (n - 1)) = BV.split# bv
   bit = BV.unpack# b
 
@@ -32,6 +54,8 @@ rdestructBV ::
   forall n. (KnownNat n, 1 <= n) => BitVector n -> (BitVector (n - 1), Bit)
 rdestructBV bv = (bs, bit)
  where
+  -- bs :: BitVector (n - 1) = firstBV @1 bv
+  -- b :: BitVector (1) = lastBV @(n - 1) bv
   (bs :: BitVector (n - 1), b :: BitVector 1) = BV.split# bv
   bit = BV.unpack# b
 
@@ -91,7 +115,7 @@ mapBV f bv = maybeDestructBV go bv bv
 zipWithBV ::
   forall n.
   (KnownNat n) => (Bit -> Bit -> Bit) -> BitVector n -> BitVector n -> BitVector n
-zipWithBV f bv1 bv2 = maybeDestructBV2 go bv1 bv1 bv2
+zipWithBV f bv1 bv2 = maybeDestructBV2 go all0BV bv1 bv2
  where
   go b1 b2 bs1 bs2 = BV.pack# (f b1 b2) BV.++# zipWithBV f bs1 bs2
 
@@ -105,6 +129,8 @@ foldlBV f d bv = maybeLDestructBV go d bv
  where
   go bs b = f b (foldrBV f d bs)
 
+{-# ANN all0BV hasBlackBox #-}
+{-# NOINLINE all0BV #-}
 all0BV :: (KnownNat n) => BitVector n
 all0BV = BV.BV 0 0
 

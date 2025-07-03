@@ -40,16 +40,16 @@ shiftlBV
   , rotatelBV
   , rotaterBV ::
     forall n. (KnownNat n) => BitVector n -> BitVector n
-shiftlBV bv = maybeDestructBV go bv bv
+shiftlBV bv = maybeDestructBV go all0BV bv
  where
   go _ bs = bs BV.++# BV.pack# BV.low
-shiftrBV bv = maybeLDestructBV go bv bv
+shiftrBV bv = maybeLDestructBV go all0BV bv
  where
   go bs _ = BV.pack# BV.low BV.++# bs
-rotatelBV bv = maybeDestructBV go bv bv
+rotatelBV bv = maybeDestructBV go all0BV bv
  where
   go b bs = bs BV.++# BV.pack# b
-rotaterBV bv = maybeLDestructBV go bv bv
+rotaterBV bv = maybeLDestructBV go all0BV bv
  where
   go bs b = BV.pack# b BV.++# bs
 
@@ -130,7 +130,7 @@ negate# :: forall n. (KnownNat n) => BitVector n -> BitVector n
 negate# bv = fst $ negateBV bv
 
 negateBV :: forall n. (KnownNat n) => BitVector n -> (BitVector n, Bit)
-negateBV bv = maybeDestructBV go (bv, BV.high) bv
+negateBV bv = maybeDestructBV go (all0BV, BV.high) bv
  where
   go b bs =
     let
@@ -141,7 +141,7 @@ negateBV bv = maybeDestructBV go (bv, BV.high) bv
 
 adder ::
   forall n. (KnownNat n) => BitVector n -> BitVector n -> (BitVector n, Bit)
-adder bv1 bv2 = maybeDestructBV2 go (bv1, BV.low) bv1 bv2
+adder bv1 bv2 = maybeDestructBV2 go (all0BV, BV.low) bv1 bv2
  where
   go b1 b2 bs1 bs2 =
     let
@@ -173,11 +173,11 @@ complement# = mapBV (n)
 
 or# ::
   forall n. (KnownNat n) => BitVector n -> BitVector n -> BitVector n
-or# = zipWithBV (BV.or##)
+or# = zipWithBV (or##)
 
 xor# ::
   forall n. (KnownNat n) => BitVector n -> BitVector n -> BitVector n
-xor# = zipWithBV (BV.xor##)
+xor# = zipWithBV (xor##)
 
 neq# ::
   (KnownNat n) => BitVector n -> BitVector n -> Bool
