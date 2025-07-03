@@ -13,24 +13,7 @@ import {-# SOURCE #-} Clash.Sized.Internal.BitVector (Bit, BitVector)
 
 import {-# SOURCE #-} qualified Clash.Sized.Internal.BitVector as BV
 
--- {-# ANN lastBV hasBlackBox #-}
--- -- {-# NOINLINE lastBV #-}
--- {-# CLASH_OPAQUE lastBV #-}
--- lastBV ::
---   forall n o. (KnownNat n, KnownNat o) => BitVector (n + o) -> BitVector (o)
--- lastBV bv = s
---  where
---   (_ :: BitVector (n), s :: BitVector o) = BV.split# bv
---
--- {-# ANN firstBV hasBlackBox #-}
--- -- {-# NOINLINE firstBV #-}
--- {-# CLASH_OPAQUE firstBV #-}
--- firstBV ::
---   forall o n. (KnownNat o, KnownNat n) => BitVector (n + o) -> BitVector (n)
--- firstBV bv = s
---  where
---   (s :: BitVector (n), _ :: BitVector o) = BV.split# bv
---
+
 maybeBV ::
   forall n d.
   (KnownNat n) =>
