@@ -1,0 +1,7 @@
+- BlackBox:
+    name: Clash.XException.errorX
+    kind: Expression
+    type: "errorX :: HasCallStack
+      => String -> a"
+    template: ~ERRORO
+    workInfo: Constant
