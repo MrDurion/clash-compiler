@@ -567,14 +567,14 @@ instance KnownNat n => Bits (Unsigned n) where
 {-# ANN and# (aigerSubstitution 'Clash.Aiger.Unsigned.and#) #-}
 {-# CLASH_OPAQUE and# #-}
 {-# ANN and# hasBlackBox #-}
-and# :: Unsigned n -> Unsigned n -> Unsigned n
+and# :: KnownNat n => Unsigned n -> Unsigned n -> Unsigned n
 and# (U v1) (U v2) = U (v1 .&. v2)
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
 {-# ANN or# (aigerSubstitution 'Clash.Aiger.Unsigned.or#) #-}
 {-# CLASH_OPAQUE or# #-}
 {-# ANN or# hasBlackBox #-}
-or# :: Unsigned n -> Unsigned n -> Unsigned n
+or# :: KnownNat n => Unsigned n -> Unsigned n -> Unsigned n
 or# (U v1) (U v2) = U (v1 .|. v2)
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
