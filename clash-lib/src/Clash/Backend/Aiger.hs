@@ -400,7 +400,6 @@ getIndeces expr =
     Id i1 -> do
       aigerExprs <- getAigerExpr i1
       i <- getIndeces aigerExprs
-      -- traceM $ "For Id (" ++ show aigerExprs ++ ") we got " ++ show i
       pure i
     Concat es -> do
       concatMapM getIndeces es
@@ -411,7 +410,6 @@ getIndeces expr =
       pure [ind]
     Complement i1 -> do
       aigerIndeces <- getIndeces i1
-      -- traceM $ "For (" ++ show i1 ++ ") we got " ++ show aigerIndeces
       pure $ map complement aigerIndeces
     BitRange bs -> do
       pure bs
@@ -447,33 +445,33 @@ modifier (Id -> pointer) m = case m of
   _ -> pointer
   
 
-printExpr :: Expr -> String
-printExpr e = case e of
-  (Identifier eI mm) -> show (toText eI) ++ "[" ++ show mm ++ "]"
-  (Literal _ l) -> "Lit(" ++ show l ++ ")"
-  (DataCon hwt _ ex) ->
-    "DataCon ("
-      ++ head (words (show hwt))
-      ++ ") {"
-      ++ (unwords $ map printExpr ex)
-      ++ "}"
-  (DataTag _ _) -> "DataTag ?"
-  (BlackBoxE n _ _ _ _ th _) ->
-    show n
-      ++ " ["
-      ++ (unwords $ map (\(a, _, _) -> "(" ++ printExpr a ++ ")") (bbInputs th))
-      ++ "]"
-  (ToBv _ _ e1) -> printExpr e1
-  (FromBv _ _ e1) -> printExpr e1
-  (IfThenElse a b c) ->
-    "If ("
-      ++ printExpr a
-      ++ ") then ("
-      ++ printExpr b
-      ++ ") else ("
-      ++ printExpr c
-      ++ ")"
-  (Noop) -> "Noop"
+-- printExpr :: Expr -> String
+-- printExpr e = case e of
+--   (Identifier eI mm) -> show (toText eI) ++ "[" ++ show mm ++ "]"
+--   (Literal _ l) -> "Lit(" ++ show l ++ ")"
+--   (DataCon hwt _ ex) ->
+--     "DataCon ("
+--       ++ head (words (show hwt))
+--       ++ ") {"
+--       ++ (unwords $ map printExpr ex)
+--       ++ "}"
+--   (DataTag _ _) -> "DataTag ?"
+--   (BlackBoxE n _ _ _ _ th _) ->
+--     show n
+--       ++ " ["
+--       ++ (unwords $ map (\(a, _, _) -> "(" ++ printExpr a ++ ")") (bbInputs th))
+--       ++ "]"
+--   (ToBv _ _ e1) -> printExpr e1
+--   (FromBv _ _ e1) -> printExpr e1
+--   (IfThenElse a b c) ->
+--     "If ("
+--       ++ printExpr a
+--       ++ ") then ("
+--       ++ printExpr b
+--       ++ ") else ("
+--       ++ printExpr c
+--       ++ ")"
+--   (Noop) -> "Noop"
 
 parseDataConE :: HWType -> [Expr] -> AigerM AigerExpr
 parseDataConE h es = do
@@ -585,9 +583,7 @@ parseDeclaration d = do
 
     pure ()
   parseAssignment i e = do
-    traceM $ show i ++ " = " ++ printExpr e
     aigerExpr <- convertExprToAigerExpr e
-    -- traceM $ "------------------" ++ show i ++ " = " ++ show aigerExpr
     addAssignment i aigerExpr
 
 genAIGER ::
@@ -616,8 +612,8 @@ componentToAiger :: Component -> AigerM Doc
 componentToAiger c = do
   componentToState c
 
-  traceM ""
-  traceState
+  -- traceM ""
+  -- traceState
   -- The graph has been parsed and now we generate the file from the aigerM State
   numInputs <- getNumInputs
   numOutputs <- getNumOutputs
@@ -689,7 +685,6 @@ saveOutputs c = do
       Just e -> convertExprToAigerExpr e
       Nothing -> getAigerExpr (Pointer (toText ident))
     indeces <- getIndeces expr
-    traceM $ "For output " ++ show (toText ident) ++ " we got " ++ show indeces
     _ <- mapM (addON) indeces
     pure ()
    where
