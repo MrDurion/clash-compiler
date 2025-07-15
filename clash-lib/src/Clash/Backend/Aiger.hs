@@ -46,7 +46,9 @@ import Clash.Netlist.Types (
   Identifier (..),
   IdentifierSet,
   Literal (..),
-  UsageMap, Modifier (..),
+  Modifier (..),
+  Size,
+  UsageMap,
  )
 import Clash.Netlist.Util (typeSize)
 import Clash.Util (SrcSpan)
@@ -62,6 +64,10 @@ import qualified Clash.Backend
 import qualified Clash.Netlist.Id as Id
 
 type BUsage = Clash.Backend.Usage
+
+-- ##################
+-- ### DATA DECLS ###
+-- ##################
 
 data AigerIndex = AigerIndex Int Bool
 toInt :: AigerIndex -> Int
@@ -95,6 +101,7 @@ data AigerExpr
   = Id AigerPointer
   | Concat [AigerExpr]
   | Range Int Int AigerExpr
+  | LastRange Int Int AigerExpr
   | And AigerIndex
   | Complement AigerExpr
   | BitRange [AigerIndex]
@@ -109,6 +116,10 @@ data AigerState = AigerState
   , _unsolvedAndNodes :: [UnsolvedAndNode]
   , _aigerExpressions :: Map.Map AigerPointer AigerExpr
   }
+
+-- ##################
+-- ### STATE MODS ###
+-- ##################
 
 makeLenses ''AigerState
 
@@ -403,6 +414,9 @@ getIndeces expr =
       pure i
     Concat es -> do
       concatMapM getIndeces es
+    LastRange start end e1 -> do
+      i1 <- getIndeces e1
+      pure $ reverse $ drop start (take (end) (reverse i1))
     Range start end e1 -> do
       i1 <- getIndeces e1
       pure $ drop start (take (end) i1)
@@ -416,11 +430,16 @@ getIndeces expr =
     Empty -> do
       pure []
 
+-- ###################
+-- ### EXPRESSIONS ###
+-- ###################
+
 convertExprToAigerExpr :: Expr -> AigerM AigerExpr
 convertExprToAigerExpr e = case e of
   (Identifier eI Nothing) -> pure $ Id (Pointer (toText eI))
   (Identifier eI (Just a)) -> pure $ modifier (Pointer (toText eI)) a
-  (Literal _ _) -> trace ("TODO found " ++ show e) $ pure Empty
+  (Literal Nothing _) -> trace ("Found literal without HWType: " ++ show e) $ pure Empty
+  (Literal (Just (hwt, sz)) l) -> pure $ parseLiteral hwt sz l
   (DataCon hwt _ ex) -> parseDataConE hwt ex
   (DataTag _ _) -> trace ("TODO found " ++ show e) $ pure Empty
   (BlackBoxE n _ _ _ _ templateContext _) -> parseBlackBoxE n templateContext
@@ -428,6 +447,35 @@ convertExprToAigerExpr e = case e of
   (FromBv _ _ e1) -> convertExprToAigerExpr e1
   (IfThenElse _ _ _) -> trace ("TODO found " ++ show e) $ pure Empty
   (Noop) -> trace "TODO found Noop" $ pure Empty
+
+parseLiteral :: HWType -> Size -> Literal -> AigerExpr
+parseLiteral hwt _ (NumLit i) = case hwt of
+  Unsigned n -> BitRange $ makeUnsigned i n
+  Signed n -> BitRange $ makeSigned i n
+  _ ->
+    trace ("Can not parse num literal with HWType " ++ show hwt) $
+      Empty
+ where
+  makeUnsigned :: Integer -> Size -> [AigerIndex]
+  makeUnsigned ii n =
+    map
+      (\a -> AigerIndex 0 $ not $ divBy2 (div ii (2 ^ a)))
+      (reverse [0 .. (n - 1)])
+  makeSigned :: Integer -> Size -> [AigerIndex]
+  makeSigned ii n =
+    let signed = ii < 0
+        unsignedVersion = makeUnsigned (abs ii) n
+     in if signed
+          then unsignedVersion
+          else [AigerIndex 0 signed] ++ makeUnsigned ((2 ^ n) + ii) (n - 1)
+  divBy2 n = case n `mod` 2 of
+    0 -> True
+    _ -> False
+parseLiteral hwt sz (BitLit b) = undefined
+parseLiteral hwt sz (BitVecLit i1 i2) = undefined
+parseLiteral hwt sz (BoolLit b) = undefined
+parseLiteral hwt sz (VecLit ls) = undefined
+parseLiteral hwt sz (StringLit s) = undefined
 
 modifier :: AigerPointer -> Modifier -> AigerExpr
 modifier (Id -> pointer) m = case m of
@@ -437,41 +485,11 @@ modifier (Id -> pointer) m = case m of
     frontSize = sum $ map typeSize frontHWT
     currentHWT = hwts !! ft
     currentSize = typeSize currentHWT
-    start = frontSize 
+    start = frontSize
     end = start + currentSize
-    
-
   Sliced (_, s, end) -> Range s end pointer
+  -- TODO other modifiers
   _ -> pointer
-  
-
--- printExpr :: Expr -> String
--- printExpr e = case e of
---   (Identifier eI mm) -> show (toText eI) ++ "[" ++ show mm ++ "]"
---   (Literal _ l) -> "Lit(" ++ show l ++ ")"
---   (DataCon hwt _ ex) ->
---     "DataCon ("
---       ++ head (words (show hwt))
---       ++ ") {"
---       ++ (unwords $ map printExpr ex)
---       ++ "}"
---   (DataTag _ _) -> "DataTag ?"
---   (BlackBoxE n _ _ _ _ th _) ->
---     show n
---       ++ " ["
---       ++ (unwords $ map (\(a, _, _) -> "(" ++ printExpr a ++ ")") (bbInputs th))
---       ++ "]"
---   (ToBv _ _ e1) -> printExpr e1
---   (FromBv _ _ e1) -> printExpr e1
---   (IfThenElse a b c) ->
---     "If ("
---       ++ printExpr a
---       ++ ") then ("
---       ++ printExpr b
---       ++ ") else ("
---       ++ printExpr c
---       ++ ")"
---   (Noop) -> "Noop"
 
 parseDataConE :: HWType -> [Expr] -> AigerM AigerExpr
 parseDataConE h es = do
@@ -486,7 +504,6 @@ parseDataConE h es = do
 
 parseBlackBoxE :: Text -> BlackBoxContext -> AigerM AigerExpr
 parseBlackBoxE n context =
-  -- FIXME oh no!
   ( case (show n) of
       "\"Clash.Sized.Internal.BitVector.++#\"" -> do
         id1 <- getExpr 1
@@ -499,18 +516,6 @@ parseBlackBoxE n context =
         id1 <- getExpr 1
         id1E <- convertExprToAigerExpr id1
         pure $ id1E
-      -- "\"Clash.Aiger.Util.firstBV\"" -> do
-      --   -- o0 <- getNatLit 0
-      --   n0 <- getNatLit 1
-      --   id2 <- getExpr 2
-      --   id2E <- convertExprToAigerExpr id2
-      --   pure $ Range 0 n0 id2E
-      -- "\"Clash.Aiger.Util.lastBV\"" -> do
-      --   o0 <- getNatLit 0
-      --   n0 <- getNatLit 1
-      --   id2 <- getExpr 2
-      --   id2E <- convertExprToAigerExpr id2
-      --   pure $ Range o0 (n0) id2E
       "\"Clash.Sized.Internal.BitVector.unpack#\"" -> do
         id0 <- getExpr 0
         convertExprToAigerExpr id0
@@ -542,6 +547,20 @@ parseBlackBoxE n context =
       "\"Clash.Aiger.Util.all0BV\"" -> do
         n0 <- getNatLit 0
         pure $ BitRange (replicate n0 (AigerIndex 0 False))
+      "\"Clash.Sized.Internal.BitVector.fromInteger##\"" -> do
+        n1 <- getExpr 1
+        n1E <- convertExprToAigerExpr n1
+        pure $ LastRange 0 1 n1E
+      "\"Clash.Sized.Internal.BitVector.fromInteger#\"" -> do
+        sz <- getNatLit 0
+        n1 <- getExpr 2
+        n1E <- convertExprToAigerExpr n1
+        pure $ LastRange 0 sz n1E
+      "\"Clash.Sized.Internal.Unsigned.fromInteger#\"" -> do
+        sz <- getNatLit 0
+        n1 <- getExpr 1
+        n1E <- convertExprToAigerExpr n1
+        pure $ LastRange 0 sz n1E
       _ -> trace ("could not parse " ++ show n) $ pure Empty
   )
  where
@@ -559,6 +578,10 @@ parseBlackBoxE n context =
       l ->
         error $
           "could not find literal in " ++ show n ++ ", found " ++ show (l)
+
+-- ####################
+-- ### DECLARATIONS ###
+-- ####################
 
 parseDeclaration :: Declaration -> AigerM ()
 parseDeclaration d = do
@@ -680,12 +703,13 @@ saveOutputs c = do
   _ <- mapM saveOutput o
   pure ()
  where
-  saveOutput (_, (ident, _), maybeExpr) = do
+  saveOutput (_, (ident, hwt), maybeExpr) = do
     expr <- case maybeExpr of
       Just e -> convertExprToAigerExpr e
       Nothing -> getAigerExpr (Pointer (toText ident))
     indeces <- getIndeces expr
-    _ <- mapM (addON) indeces
+    let final = drop (length indeces - typeSize hwt) indeces
+    _ <- mapM (addON) final
     pure ()
    where
     addON i = do

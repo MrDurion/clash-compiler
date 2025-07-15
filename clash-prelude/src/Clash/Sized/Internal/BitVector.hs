@@ -1271,7 +1271,7 @@ shiftL#, shiftR#, rotateL#, rotateR#
   :: forall n . KnownNat n => BitVector n -> Int -> BitVector n
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
--- {-# ANN shiftL# (aigerSubstitution 'AIGER.shiftL#) #-}
+{-# ANN shiftL# (aigerSubstitution 'AIGER.shiftL#) #-}
 {-# CLASH_OPAQUE shiftL# #-}
 {-# ANN shiftL# hasBlackBox #-}
 shiftL# = \(BV msk v) i ->
@@ -1291,7 +1291,7 @@ shiftL# = \(BV msk v) i ->
 #endif
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
--- {-# ANN shiftR# (aigerSubstitution 'AIGER.shiftR#) #-}
+{-# ANN shiftR# (aigerSubstitution 'AIGER.shiftR#) #-}
 {-# CLASH_OPAQUE shiftR# #-}
 {-# ANN shiftR# hasBlackBox #-}
 shiftR# (BV m v) i
@@ -1300,7 +1300,7 @@ shiftR# (BV m v) i
   | otherwise = BV (shiftR m i) (shiftR v i)
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
--- {-# ANN rotateL# (aigerSubstitution 'AIGER.rotateL#) #-}
+{-# ANN rotateL# (aigerSubstitution 'AIGER.rotateL#) #-}
 {-# CLASH_OPAQUE rotateL# #-}
 {-# ANN rotateL# hasBlackBox #-}
 rotateL# =
@@ -1337,7 +1337,7 @@ rotateL# =
 #endif
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
--- {-# ANN rotateR# (aigerSubstitution 'AIGER.rotateR#) #-}
+{-# ANN rotateR# (aigerSubstitution 'AIGER.rotateR#) #-}
 {-# CLASH_OPAQUE rotateR# #-}
 {-# ANN rotateR# hasBlackBox #-}
 rotateR# =
