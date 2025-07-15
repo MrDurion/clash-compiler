@@ -37,6 +37,7 @@ import Clash.Driver.Types (ClashOpts)
 import Clash.Netlist.BlackBox.Types (HdlSyn)
 import Clash.Netlist.Id (toText)
 import Clash.Netlist.Types (
+  Bit (..),
   BlackBoxContext (..),
   Component (..),
   Declaration (..),
@@ -75,6 +76,10 @@ toInt (AigerIndex i b) = (i * 2) + if b then 1 else 0
 
 complement :: AigerIndex -> AigerIndex
 complement (AigerIndex i b) = AigerIndex i (not b)
+
+-- TODO what to do with undefined.
+undefinedBit :: AigerIndex
+undefinedBit = AigerIndex 0 False
 
 instance Show AigerIndex where
   show ai = show $ toInt ai
@@ -438,8 +443,7 @@ convertExprToAigerExpr :: Expr -> AigerM AigerExpr
 convertExprToAigerExpr e = case e of
   (Identifier eI Nothing) -> pure $ Id (Pointer (toText eI))
   (Identifier eI (Just a)) -> pure $ modifier (Pointer (toText eI)) a
-  (Literal Nothing _) -> trace ("Found literal without HWType: " ++ show e) $ pure Empty
-  (Literal (Just (hwt, sz)) l) -> pure $ parseLiteral hwt sz l
+  (Literal mhwt l) -> pure $ parseLiteral mhwt l
   (DataCon hwt _ ex) -> parseDataConE hwt ex
   (DataTag _ _) -> trace ("TODO found " ++ show e) $ pure Empty
   (BlackBoxE n _ _ _ _ templateContext _) -> parseBlackBoxE n templateContext
@@ -448,34 +452,44 @@ convertExprToAigerExpr e = case e of
   (IfThenElse _ _ _) -> trace ("TODO found " ++ show e) $ pure Empty
   (Noop) -> trace "TODO found Noop" $ pure Empty
 
-parseLiteral :: HWType -> Size -> Literal -> AigerExpr
-parseLiteral hwt _ (NumLit i) = case hwt of
+parseLiteral :: Maybe (HWType, Size) -> Literal -> AigerExpr
+parseLiteral Nothing (NumLit i) = trace ("Num Literal without HWType found: " ++ show i) $ Empty
+parseLiteral (Just (hwt, _)) (NumLit i) = case hwt of
   Unsigned n -> BitRange $ makeUnsigned i n
   Signed n -> BitRange $ makeSigned i n
   _ ->
     trace ("Can not parse num literal with HWType " ++ show hwt) $
       Empty
- where
-  makeUnsigned :: Integer -> Size -> [AigerIndex]
-  makeUnsigned ii n =
-    map
-      (\a -> AigerIndex 0 $ not $ divBy2 (div ii (2 ^ a)))
-      (reverse [0 .. (n - 1)])
-  makeSigned :: Integer -> Size -> [AigerIndex]
-  makeSigned ii n =
-    let signed = ii < 0
-        unsignedVersion = makeUnsigned (abs ii) n
-     in if signed
-          then unsignedVersion
-          else [AigerIndex 0 signed] ++ makeUnsigned ((2 ^ n) + ii) (n - 1)
-  divBy2 n = case n `mod` 2 of
-    0 -> True
-    _ -> False
-parseLiteral hwt sz (BitLit b) = undefined
-parseLiteral hwt sz (BitVecLit i1 i2) = undefined
-parseLiteral hwt sz (BoolLit b) = undefined
-parseLiteral hwt sz (VecLit ls) = undefined
-parseLiteral hwt sz (StringLit s) = undefined
+parseLiteral _ (BitLit b) =
+  BitRange
+    [ ( case b of
+          H -> AigerIndex 0 True
+          L -> AigerIndex 0 False
+          _ -> undefinedBit
+      )
+    ]
+parseLiteral _ (BoolLit b) = BitRange [AigerIndex 0 b]
+parseLiteral _ (BitVecLit i1 i2) = trace ("TODO bitVec literal found: " ++ show i1 ++ " " ++ show i2) $ Empty -- BitRange $ makeUnsigned i2 i1 -- TODO what does the two integers mean??
+parseLiteral _ (VecLit ls) = Concat $ map (parseLiteral Nothing) ls -- TODO what about HWType pass on?
+parseLiteral _ (StringLit s) = trace ("TODO String literal found: " ++ s) $ Empty
+
+makeUnsigned :: Integer -> Size -> [AigerIndex]
+makeUnsigned ii n =
+  map
+    (\a -> AigerIndex 0 $ not $ divBy2 (div ii (2 ^ a)))
+    (reverse [0 .. (n - 1)])
+makeSigned :: Integer -> Size -> [AigerIndex]
+makeSigned ii n =
+  let signed = ii < 0
+      unsignedVersion = makeUnsigned (abs ii) n
+   in if signed
+        then unsignedVersion
+        else [AigerIndex 0 signed] ++ makeUnsigned ((2 ^ n) + ii) (n - 1)
+
+divBy2 :: (Integral a) => a -> Bool
+divBy2 n = case n `mod` 2 of
+  0 -> True
+  _ -> False
 
 modifier :: AigerPointer -> Modifier -> AigerExpr
 modifier (Id -> pointer) m = case m of
@@ -505,6 +519,24 @@ parseDataConE h es = do
 parseBlackBoxE :: Text -> BlackBoxContext -> AigerM AigerExpr
 parseBlackBoxE n context =
   ( case (show n) of
+      "\"Clash.Aiger.BitVector.undefined##\"" -> do
+        pure $ BitRange [undefinedBit]
+      "\"Clash.Sized.Internal.BitVector.high\"" -> do
+        pure $ BitRange [(AigerIndex 0 True)]
+      "\"Clash.Sized.Internal.BitVector.low\"" -> do
+        pure $ BitRange [(AigerIndex 0 False)]
+      "\"Clash.Sized.Internal.BitVector.and##\"" -> do
+        id0 <- getExpr 0
+        id0E <- convertExprToAigerExpr id0
+        id1 <- getExpr 1
+        id1E <- convertExprToAigerExpr id1
+        index <- getNewIndex
+        addUnsolvedAndNodes $ UnsolvedAndNode index id0E id1E
+        pure $ And index
+      "\"Clash.Sized.Internal.BitVector.complement##\"" -> do
+        id0 <- getExpr 0
+        id0E <- convertExprToAigerExpr id0
+        pure $ Complement id0E
       "\"Clash.Sized.Internal.BitVector.++#\"" -> do
         id1 <- getExpr 1
         id1E <- convertExprToAigerExpr id1
@@ -528,25 +560,9 @@ parseBlackBoxE n context =
       "\"Clash.Sized.Internal.Unsigned.pack#\"" -> do
         id0 <- getExpr 0
         convertExprToAigerExpr id0
-      "\"Clash.Sized.Internal.BitVector.and##\"" -> do
-        id0 <- getExpr 0
-        id0E <- convertExprToAigerExpr id0
-        id1 <- getExpr 1
-        id1E <- convertExprToAigerExpr id1
-        index <- getNewIndex
-        addUnsolvedAndNodes $ UnsolvedAndNode index id0E id1E
-        pure $ And index
-      "\"Clash.Sized.Internal.BitVector.complement##\"" -> do
-        id0 <- getExpr 0
-        id0E <- convertExprToAigerExpr id0
-        pure $ Complement id0E
-      "\"Clash.Sized.Internal.BitVector.low\"" -> do
-        pure $ BitRange [(AigerIndex 0 False)]
-      "\"Clash.Sized.Internal.BitVector.high\"" -> do
-        pure $ BitRange [(AigerIndex 0 True)]
-      "\"Clash.Aiger.Util.all0BV\"" -> do
-        n0 <- getNatLit 0
-        pure $ BitRange (replicate n0 (AigerIndex 0 False))
+      -- "\"Clash.Aiger.Util.all0BV\"" -> do
+      --   n0 <- getNatLit 0
+      --   pure $ BitRange (replicate n0 (AigerIndex 0 False))
       "\"Clash.Sized.Internal.BitVector.fromInteger##\"" -> do
         n1 <- getExpr 1
         n1E <- convertExprToAigerExpr n1

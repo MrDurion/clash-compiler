@@ -20,6 +20,10 @@ data BitVector (n :: Nat)
   , unsafeToNatural :: !Natural
   }
 data Bit
+  = Bit
+  { unsafeMask# :: {-# UNPACK #-} !Word
+  , unsafeToInteger# :: {-# UNPACK #-} !Word
+  }
 
 complement## :: Bit -> Bit
 undefError :: (KnownNat n) => String -> [BitVector n] -> a

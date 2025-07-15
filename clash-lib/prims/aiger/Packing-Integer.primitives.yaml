@@ -1,0 +1,18 @@
+- BlackBox:
+    name: Clash.Sized.Internal.Unsigned.fromInteger#
+    kind: Expression
+    type: "unpack# :: KnownNat n => Integer -> Unsigned n"
+    template: ~ARG[1]
+    workInfo: Never
+- BlackBox:
+    name: Clash.Sized.Internal.BitVector.fromInteger##
+    kind: Expression
+    type: "fromInteger## :: Word# -> Integer -> Bit"
+    template: ~ARG[1]
+    workInfo: Never
+- BlackBox:
+    name: Clash.Sized.Internal.BitVector.fromInteger#
+    kind: Expression
+    type: "fromInteger# :: KnownNat n => Integer -> Integer -> BitVector n"
+    template: ~LIT[0] ~ARG[2]
+    workInfo: Never

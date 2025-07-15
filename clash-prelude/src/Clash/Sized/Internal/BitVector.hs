@@ -1547,6 +1547,7 @@ undefined# =
 #endif
   in  BV (m-1) 0
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN undefined# (aigerSubstitution 'AIGER.undefined#) #-}
 {-# CLASH_OPAQUE undefined# #-}
 {-# ANN undefined# hasBlackBox #-}
 

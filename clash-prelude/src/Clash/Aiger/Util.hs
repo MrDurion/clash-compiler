@@ -5,13 +5,15 @@
 
 module Clash.Aiger.Util where
 
-import GHC.TypeLits (KnownNat, type (+), type (-), type (<=))
+import GHC.TypeLits (KnownNat, type (-), type (<=))
 
-import Clash.Annotations.Primitive (hasBlackBox)
 import Clash.Promoted.Nat (SNat (..), SNatLE (..), compareSNat)
 import {-# SOURCE #-} Clash.Sized.Internal.BitVector (Bit, BitVector)
 
 import {-# SOURCE #-} qualified Clash.Sized.Internal.BitVector as BV
+
+all0BV :: forall n. (KnownNat n) => BitVector n
+all0BV = mapBV (\_ -> BV.low) (BV.BV 0 0)
 
 maybeBV ::
   forall n d.
@@ -110,11 +112,6 @@ foldlBV :: forall n b. (KnownNat n) => (Bit -> b -> b) -> b -> BitVector n -> b
 foldlBV f d bv = maybeLDestructBV go d bv
  where
   go bs b = f b (foldrBV f d bs)
-
-{-# ANN all0BV hasBlackBox #-}
-{-# CLASH_OPAQUE all0BV #-}
-all0BV :: (KnownNat n) => BitVector n
-all0BV = BV.BV 0 0
 
 growBV ::
   forall m n. (KnownNat n, KnownNat m, m <= n) => BitVector m -> BitVector n

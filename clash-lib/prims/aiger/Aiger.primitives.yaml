@@ -1,4 +1,10 @@
 - BlackBox:
+    name: Clash.Aiger.BitVector.undefined##
+    kind: Expression
+    type: "undefined## :: Bit"
+    template: "x"
+    workInfo: Constant
+- BlackBox:
     name: Clash.Sized.Internal.BitVector.high
     kind: Expression
     type: "high :: Bit"

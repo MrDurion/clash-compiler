@@ -19,6 +19,14 @@ import {-# SOURCE #-} qualified Clash.Sized.Internal.BitVector as BV
 all1BV :: (KnownNat n) => BitVector n
 all1BV = complement# $ all0BV
 
+{-# ANN undefined## hasBlackBox #-}
+{-# CLASH_OPAQUE undefined## #-}
+undefined## :: Bit
+undefined## = BV.Bit 1 0
+
+undefined# :: (KnownNat n) => BitVector n
+undefined# = mapBV (\_ -> undefined##) (BV.BV 0 0)
+
 reduceAnd# :: (KnownNat n) => BitVector n -> Bit
 reduceAnd# bv = foldrBV (&) BV.high bv
 
