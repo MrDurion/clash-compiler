@@ -1,0 +1,47 @@
+- BlackBox:
+    name: Clash.Aiger.BitVector.bitToBool
+    kind: Expression
+    type: "bitToBool :: Bit -> Bool"
+    template: ~ARG[0]
+- BlackBox:
+    name: Clash.Sized.Internal.BitVector.pack#
+    kind: Expression
+    type: "pack# :: Bit -> BitVector 1"
+    template: ~ARG[0]
+    workInfo: Never
+- BlackBox:
+    name: Clash.Sized.Internal.BitVector.unpack#
+    kind: Expression
+    type: "unpack# :: BitVector 1 -> Bit"
+    template: ~ARG[0]
+    workInfo: Never
+- BlackBox:
+    name: Clash.Sized.Internal.Unsigned.pack#
+    kind: Expression
+    type: "pack# :: Unsigned n -> BitVector n"
+    template: ~ARG[0]
+    workInfo: Never
+- BlackBox:
+    name: Clash.Sized.Internal.Unsigned.unpack#
+    kind: Expression
+    type: "unpack# :: KnownNat n => BitVector n -> Unsigned n"
+    template: ~ARG[1]
+    workInfo: Never
+- BlackBox:
+    name: Clash.Sized.Internal.Unsigned.fromInteger#
+    kind: Expression
+    type: "unpack# :: KnownNat n => Integer -> Unsigned n"
+    template: ~ARG[1]
+    workInfo: Never
+- BlackBox:
+    name: Clash.Sized.Internal.BitVector.fromInteger##
+    kind: Expression
+    type: "fromInteger## :: Word# -> Integer -> Bit"
+    template: ~ARG[1]
+    workInfo: Never
+- BlackBox:
+    name: Clash.Sized.Internal.BitVector.fromInteger#
+    kind: Expression
+    type: "fromInteger# :: KnownNat n => Integer -> Integer -> BitVector n"
+    template: ~LIT[0] ~ARG[2]
+    workInfo: Never

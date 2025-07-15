@@ -1,0 +1,26 @@
+- BlackBox:
+    name: Clash.Aiger.Util.all0BV
+    kind: Expression
+    type: "all0BV:: KnownNat n => BitVector n"
+    template: ~REPEAT[0][~LIT[0]]
+- BlackBox:
+    name: Clash.Sized.Internal.BitVector.++#
+    kind: Expression
+    type: "(++#) :: KnownNat m => BitVector n -> BitVector m -> BitVector (n + m)"
+    template: "~ARG[1] ++ ~ARG[2] ~LIT[0]"
+    workInfo: Never
+- BlackBox:
+    name: Clash.Sized.Internal.BitVector.split#
+    kind: Expression
+    type: |-
+      split# :: KnownNat n        -- ARG[0]
+              => BitVector (m + n) -- ARG[1]
+              -> (BitVector m, BitVector n)
+    template: ~ARG[1] ~LIT[0]
+    workInfo: Never
+- BlackBox:
+    name: Clash.Sized.Internal.BitVector.undefined#
+    kind: Expression
+    type: "undefined# :: KnownNat n => BitVector n"
+    template: ~LIT[0]
+    workInfo: Never

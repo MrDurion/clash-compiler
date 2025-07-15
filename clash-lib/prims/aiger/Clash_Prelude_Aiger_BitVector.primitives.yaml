@@ -1,5 +1,0 @@
-- BlackBox:
-    name: Clash.Aiger.BitVector.bitToBool
-    kind: Expression
-    type: "bitToBool :: Bit -> Bool"
-    template: ~ARG[0]
