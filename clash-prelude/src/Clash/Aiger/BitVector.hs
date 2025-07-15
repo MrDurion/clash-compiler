@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -252,6 +253,6 @@ n = BV.complement##
 (&) = BV.and##
 
 {-# ANN bitToBool hasBlackBox #-}
-{-# NOINLINE bitToBool #-}
+{-# CLASH_OPAQUE bitToBool #-}
 bitToBool :: Bit -> Bool
 bitToBool b = BP.bitToBool b

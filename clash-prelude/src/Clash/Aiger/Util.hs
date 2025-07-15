@@ -13,7 +13,6 @@ import {-# SOURCE #-} Clash.Sized.Internal.BitVector (Bit, BitVector)
 
 import {-# SOURCE #-} qualified Clash.Sized.Internal.BitVector as BV
 
-
 maybeBV ::
   forall n d.
   (KnownNat n) =>
@@ -113,7 +112,7 @@ foldlBV f d bv = maybeLDestructBV go d bv
   go bs b = f b (foldrBV f d bs)
 
 {-# ANN all0BV hasBlackBox #-}
-{-# NOINLINE all0BV #-}
+{-# CLASH_OPAQUE all0BV #-}
 all0BV :: (KnownNat n) => BitVector n
 all0BV = BV.BV 0 0
 
