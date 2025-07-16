@@ -1,0 +1,171 @@
+# These are all the primitive items in common. thought I needed them?
+- Primitive:
+    name: GHC.Types.MkCoercible
+    primType: Constructor
+    workInfo: Never
+- Primitive:
+    name: Clash.Magic.prefixName
+    primType: Function
+- Primitive:
+    name: Clash.Magic.suffixName
+    primType: Function
+- Primitive:
+    name: Clash.Magic.suffixNameFromNat
+    primType: Function
+- Primitive:
+    name: Clash.Magic.suffixNameP
+    primType: Function
+- Primitive:
+    name: Clash.Magic.suffixNameFromNatP
+    primType: Function
+- Primitive:
+    name: Clash.Magic.setName
+    primType: Function
+- Primitive:
+    name: GHC.TypeNats.someNatVal
+    primType: Function
+    type: "someNatVal :: Natural -> SomeNat"
+    workInfo: Never
+- Primitive:
+    name: _CO_
+    primType: Constructor
+    workInfo: Constant
+- Primitive:
+    name: GHC.Prim.dataToTag#
+    primType: Function
+- Primitive:
+    name: GHC.Prim.dataToTagSmall#
+    primType: Function
+- Primitive:
+    name: GHC.Prim.dataToTagLarge#
+    primType: Function
+- Primitive:
+    name: GHC.Prim.tagToEnum#
+    primType: Function
+- Primitive:
+    name: GHC.Num.Natural.NS
+    comment: Needed to make the evaluator handle this constructor strictly
+    primType: Constructor
+    warning:
+      "GHC.Num.Natural.NS: Naturals are dynamically sized in simulation, but
+      fixed-length after synthesis. Use carefully."
+    workInfo: Never
+- Primitive:
+    name: GHC.Num.Natural.NB
+    comment: Needed to make the evaluator handle this constructor strictly
+    primType: Constructor
+    warning:
+      "GHC.Num.Natural.NB: Naturals are dynamically sized in simulation, but
+      fixed-length after synthesis. Use carefully."
+    workInfo: Never
+- Primitive:
+    name: GHC.Num.Natural.naturalSub
+    primType: Function
+    warning:
+      "GHC.Num.Natural.naturalSub: Naturals are dynamically sized in simulation,
+      but fixed-length after synthesis. Use carefully."
+    workInfo: Never
+- Primitive:
+    name: GHC.Num.Natural.naturalGcd
+    primType: Function
+    warning:
+      "GHC.Num.Natural.naturalGcd: Naturals are dynamically sized in simulation,
+      but fixed-length after synthesis. Use carefully."
+    workInfo: Never
+- Primitive:
+    name: GHC.Num.Integer.IS
+    comment: Needed to make the evaluator handle this constructor strictly
+    primType: Constructor
+    warning:
+      "GHC.Num.Integer.IS: Integers are dynamically sized in simulation, but
+      fixed-length after synthesis. Use carefully."
+    workInfo: Never
+- Primitive:
+    name: GHC.Num.Integer.IP
+    comment: Needed to make the evaluator handle this constructor strictly
+    primType: Constructor
+    warning:
+      "GHC.Num.Integer.IP: Integers are dynamically sized in simulation, but
+      fixed-length after synthesis. Use carefully."
+    workInfo: Never
+- Primitive:
+    name: GHC.Num.Integer.IN
+    comment: Needed to make the evaluator handle this constructor strictly
+    primType: Constructor
+    warning:
+      "GHC.Num.Integer.IN: Integers are dynamically sized in simulation, but
+      fixed-length after synthesis. Use carefully."
+    workInfo: Never
+- Primitive:
+    name: GHC.Num.Integer.integerFromNatural
+    primType: Function
+    warning:
+      "GHC.Num.Integer.integerFromNatural: No blackbox available without size
+      inference for Natural and Integer"
+    workInfo: Never
+- Primitive:
+    name: GHC.Natural.NatS#
+    comment: Needed to make the evaluator handle this constructor strictly
+    primType: Constructor
+    warning:
+      "GHC.Natural.NatS#: Naturals are dynamically sized in simulation, but
+      fixed-length after synthesis. Use carefully."
+    workInfo: Never
+- Primitive:
+    name: GHC.Natural.naturalToInteger
+    primType: Function
+    warning:
+      "GHC.Natural.naturalToInteger: No blackbox available without size inference
+      for Natural and Integer"
+    workInfo: Never
+- Primitive:
+    name: Clash.Sized.Vector.dfold
+    primType: Function
+    workInfo: Never
+- Primitive:
+    name: Clash.Sized.Vector.dtfold
+    primType: Function
+    workInfo: Never
+- Primitive:
+    name: GHC.Magic.lazy
+    primType: Function
+    workInfo: Never
+- Primitive:
+    name: GHC.Magic.noinline
+    primType: Function
+    type: forall a. a -> a
+    workInfo: Never
+- Primitive:
+    name: GHC.Magic.nospec
+    primType: Function
+    type: forall a. a -> a
+    workInfo: Never
+- Primitive:
+    name: GHC.Internal.TypeNats.someNatVal
+    primType: Function
+    type: "someNatVal :: Natural -> SomeNat"
+    workInfo: Never
+- Primitive:
+    name: Clash.Sized.Internal.BitVector.checkUnpackUndef
+    primType: Function
+    workInfo: Never
+- Primitive:
+    name: Clash.Signal.Internal.signal#
+    primType: Function
+    workInfo: Never
+- Primitive:
+    name: Clash.Signal.Internal.mapSignal#
+    primType: Function
+    workInfo: Never
+- Primitive:
+    name: Clash.Signal.Internal.appSignal#
+    primType: Function
+    workInfo: Never
+- Primitive:
+    name: Clash.Signal.Internal.foldr#
+    primType: Function
+    workInfo: Never
+- Primitive:
+    name: Clash.Signal.Internal.traverse#
+    primType: Function
+    workInfo: Never

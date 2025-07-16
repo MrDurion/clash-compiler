@@ -560,13 +560,19 @@ parseBlackBoxE n context =
       "\"Clash.Sized.Internal.Unsigned.pack#\"" -> do
         id0 <- getExpr 0
         convertExprToAigerExpr id0
-      -- "\"Clash.Aiger.Util.all0BV\"" -> do
-      --   n0 <- getNatLit 0
-      --   pure $ BitRange (replicate n0 (AigerIndex 0 False))
+      "\"Clash.Sized.Internal.BitVector.toEnum##\"" -> do
+        n1 <- getExpr 1
+        n1E <- convertExprToAigerExpr n1
+        pure $ LastRange 0 1 n1E
       "\"Clash.Sized.Internal.BitVector.fromInteger##\"" -> do
         n1 <- getExpr 1
         n1E <- convertExprToAigerExpr n1
         pure $ LastRange 0 1 n1E
+      "\"Clash.Sized.Internal.BitVector.toEnum#\"" -> do
+        sz <- getNatLit 0
+        n1 <- getExpr 1
+        n1E <- convertExprToAigerExpr n1
+        pure $ LastRange 0 sz n1E
       "\"Clash.Sized.Internal.BitVector.fromInteger#\"" -> do
         sz <- getNatLit 0
         n1 <- getExpr 2

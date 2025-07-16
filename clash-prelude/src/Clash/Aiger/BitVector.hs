@@ -7,7 +7,8 @@
 
 module Clash.Aiger.BitVector where
 
-import GHC.TypeLits (KnownNat)
+import GHC.TypeLits (KnownNat, type (+), type (-), type (<=))
+import GHC.TypeLits.Extra (Max)
 
 import Clash.Aiger.Util
 import Clash.Annotations.Primitive (hasBlackBox)
@@ -62,6 +63,7 @@ rotaterBV bv = maybeLDestructBV go all0BV bv
  where
   go bs b = BV.pack# b BV.++# bs
 
+-- TODO only use synthesizable code
 shiftL#
   , shiftR#
   , rotateL#
@@ -100,21 +102,37 @@ rotateR# bv i =
     | otherwise ->
         rotateR# (rotaterBV bv) (i - 1)
 
--- TODO should this be a sub or a primitive?
--- truncateB# ::
---   forall a b. (KnownNat a, KnownNat b) => BitVector (a + b) -> BitVector a
--- truncateB# bv = maybeBV bv go def
---  where
---   go :: (1 <= (a + b)) => BitVector (a + b) -> BitVector a
---   go bs =
---     let
---       (b1 :: BitVector (a), _ :: BitVector b) = BV.split# bs
---      in
---       b1
---   def :: BitVector a
---   def = all0BV
-
 -- BitVectors
+
+plus# ::
+  forall m n.
+  (KnownNat m, KnownNat n, m <= Max m n, n <= Max m n) =>
+  BitVector m -> BitVector n -> BitVector (Max m n + 1)
+plus# a b = a1 +# b1
+ where
+  a1 = all0BV @((Max m n) + 1 - m) BV.++# a
+  b1 = all0BV @((Max m n) + 1 - n) BV.++# b
+
+minus# ::
+  forall m n.
+  (KnownNat m, KnownNat n, m <= Max m n, n <= Max m n) =>
+  BitVector m ->
+  BitVector n ->
+  BitVector
+    (Max m n + 1)
+minus# a b = a1 -# b1
+ where
+  a1 = all0BV @((Max m n) + 1 - m) BV.++# a
+  b1 = all0BV @((Max m n) + 1 - n) BV.++# b
+
+times# ::
+  forall m n.
+  (KnownNat m, KnownNat n) => BitVector m -> BitVector n -> BitVector (m + n)
+times# a b = a1 *# b1
+ where
+  a1 = all0BV @n BV.++# a
+  b1 = all0BV @m BV.++# b
+
 (+#) ::
   forall n. (KnownNat n) => BitVector n -> BitVector n -> BitVector n
 (+#) a b = fst $ adder a b

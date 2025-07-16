@@ -203,6 +203,7 @@ import Clash.Sized.Internal.Mod
 
 -- FIXME import sorting
 import qualified Clash.Aiger.BitVector as AIGER
+import qualified Clash.Aiger.Util as AIGER_UTIL
 import Clash.Annotations.AigerSubstitution
 
 import {-# SOURCE #-} qualified Clash.Sized.Vector         as V
@@ -790,12 +791,14 @@ instance KnownNat n => Bounded (BitVector n) where
 minBound# :: BitVector n
 minBound# = BV 0 0
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN minBound# (aigerSubstitution 'AIGER_UTIL.all0BV) #-}
 {-# CLASH_OPAQUE minBound# #-}
 {-# ANN minBound# hasBlackBox #-}
 
 maxBound# :: forall n. KnownNat n => BitVector n
 maxBound# = let m = 1 `shiftL` natToNum @n in BV 0 (m-1)
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN minBound# (aigerSubstitution 'AIGER.all1BV) #-}
 {-# CLASH_OPAQUE maxBound# #-}
 {-# ANN maxBound# hasBlackBox #-}
 
@@ -897,6 +900,7 @@ instance (KnownNat m, KnownNat n) => ExtendingNum (BitVector m) (BitVector n) wh
   mul = times#
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN plus# (aigerSubstitution 'AIGER.plus#) #-}
 {-# CLASH_OPAQUE plus# #-}
 {-# ANN plus# hasBlackBox #-}
 plus# :: (KnownNat m, KnownNat n) => BitVector m -> BitVector n -> BitVector (Max m n + 1)
@@ -904,6 +908,7 @@ plus# (BV 0 a) (BV 0 b) = BV 0 (a + b)
 plus# bv1 bv2 = undefErrorP "add" bv1 bv2
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN minus# (aigerSubstitution 'AIGER.minus#) #-}
 {-# CLASH_OPAQUE minus# #-}
 {-# ANN minus# hasBlackBox #-}
 minus# :: forall m n . (KnownNat m, KnownNat n) => BitVector m -> BitVector n
@@ -920,6 +925,7 @@ minus# = go
 #endif
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN times# (aigerSubstitution 'AIGER.times#) #-}
 {-# CLASH_OPAQUE times# #-}
 {-# ANN times# hasBlackBox #-}
 times# :: (KnownNat m, KnownNat n) => BitVector m -> BitVector n -> BitVector (m + n)

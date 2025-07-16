@@ -4,6 +4,18 @@
     type: "bitToBool :: Bit -> Bool"
     template: ~ARG[0]
 - BlackBox:
+    name: Clash.Sized.Internal.BitVector.toEnum#
+    kind: Expression
+    type: "toEnum# :: KnownNat n => Int -> BitVector n"
+    template: ~LIT[0] ~ARG[1]
+    workInfo: Never
+- BlackBox:
+    name: Clash.Sized.Internal.BitVector.toEnum##
+    kind: Expression
+    type: "toEnum## :: Int -> Bit"
+    template: ~ARG[0]
+    workInfo: Never
+- BlackBox:
     name: Clash.Sized.Internal.BitVector.pack#
     kind: Expression
     type: "pack# :: Bit -> BitVector 1"

@@ -1,7 +1,4 @@
 # TODO how to parse this in backend, what does it do?
-- Primitive:
-    name: Clash.Sized.Internal.BitVector.checkUnpackUndef
-    primType: Function
 - BlackBox:
     name: Clash.Sized.Internal.BitVector.xToBV
     kind: Expression
