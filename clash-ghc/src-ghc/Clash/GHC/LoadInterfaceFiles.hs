@@ -288,15 +288,17 @@ loadIface foundMod = do
 -- | Given a list of top-level binders, recursively load all the binders,
 -- primitives, and type classes it is using. (Exported function.)
 loadExternalBinders :: GHC.GhcMonad m => HDL -> [CoreSyn.CoreBndr] -> m LoadedBinders
-loadExternalBinders hdl bndrs =
-  flip execStateT emptyLb $
+loadExternalBinders hdl bndrs = 
+  flip execStateT emptyLb $ do
+    loadPrimitiveAigerSubstitutionAnnotations 
     mapM_ (loadExprFromIface hdl) bndrs
 
 -- Given a list of binds, recursively load all its binders, primitives, and
 -- type classes it is using. (Exported function.)
 loadExternalExprs :: GHC.GhcMonad m => HDL -> [CoreSyn.CoreBind] -> m LoadedBinders
 loadExternalExprs hdl binds0 =
-  flip execStateT initLb $
+  flip execStateT initLb $ do
+    loadPrimitiveAigerSubstitutionAnnotations 
     mapM_ (\(b, e) -> addBndrM hdl b (Just e)) binds1
  where
   -- 'lbBinders' is preinitialized with all binders in given binds, as the given
@@ -366,11 +368,10 @@ loadAnnotationsM ::
   StateT LoadedBinders m ()
 loadAnnotationsM hdl modName iface = do
   anns <- lift (runIfl modName (TcIface.tcIfaceAnnotations (GHC.mi_anns iface)))
-  -- FIXME 
   case hdl of 
-    AIGER -> loadAigerSubstitutionAnnotations anns 
+    AIGER -> do
+      loadAigerSubstitutionAnnotations anns 
     _ -> pure ()
-  -- END FIXME
   primFPs <- loadPrimitiveAnnotations hdl anns
   let reprs = loadCustomReprAnnotations anns
   modify $ \lb@LoadedBinders{..} -> lb
@@ -394,6 +395,30 @@ loadAigerSubstitutionAnnotations anns = do
   deserialize =
     GhcPlugins.fromSerialized
       (GhcPlugins.deserializeWithData :: [Word8] -> AigerSubstitution)
+
+loadPrimitiveAigerSubstitutionAnnotations ::
+  GHC.GhcMonad m =>
+  LoadedBinderT m ()
+loadPrimitiveAigerSubstitutionAnnotations = do
+  let mname = Module.mkModuleName "Clash.Aiger.Prim"
+  nameMod <- lift $ GHC.findModule mname Nothing 
+#if MIN_VERSION_ghc(9,4,0)
+  env <- lift GHC.getSession
+  ifaceM <- lift (liftIO (loadIface env nameMod))
+#else
+  ifaceM <- lift (runIfl nameMod (loadIface nameMod))
+#endif
+  case ifaceM of
+    Just iface -> do
+      -- Add binder : decl map to cache
+      let
+        decls = map snd (GHC.mi_decls iface)
+        names = map IfaceSyn.ifName decls
+      tyThings <- lift $ catMaybes <$> mapM GHC.lookupName names
+      let rootIds = [(id_) | GHC.AnId id_ <- tyThings]
+      mapM (loadExprFromIface AIGER) rootIds >> pure ()
+    Nothing ->
+      error "Dafuq happened"
 
 loadExprFromIface ::
   GHC.GhcMonad m =>

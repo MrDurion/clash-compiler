@@ -16,3 +16,27 @@
     type: "fromInteger# :: KnownNat n => Integer -> Integer -> BitVector n"
     template: ~LIT[0] ~ARG[2]
     workInfo: Never
+- BlackBox:
+    name: Clash.Sized.Internal.BitVector.toInteger#
+    kind: Expression
+    type: "fromInteger# :: KnownNat n => BitVector n-> Integer"
+    template: ~LIT[0] ~ARG[1]
+    workInfo: Never
+# - BlackBox:
+#     name: GHC.Prim.int8ToInt#
+#     kind: Expression
+#     type: "int8ToInt# :: Int8 -> Int#"
+#     template: ~ARG[0]
+#     workInfo: Never
+- BlackBox:
+    name: GHC.Num.Integer.integerToInt#
+    kind: Expression
+    type: "integerToInt# :: Integer -> Int#"
+    template: ~ARG[0]
+    workInfo: Never
+- BlackBox:
+    name: GHC.Prim.intToInt8#
+    kind: Expression
+    type: "intToInt8# :: Int -> Int8#"
+    template: ~ARG[0]
+    workInfo: Never

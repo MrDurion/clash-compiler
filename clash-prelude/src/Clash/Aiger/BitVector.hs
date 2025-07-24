@@ -10,38 +10,50 @@ module Clash.Aiger.BitVector where
 import GHC.TypeLits (KnownNat, type (+), type (-), type (<=))
 import GHC.TypeLits.Extra (Max)
 
-import Clash.Aiger.Util
-import Clash.Annotations.Primitive (hasBlackBox)
+-- From Util layer
+import Clash.Aiger.Util (
+  all0BV,
+  all1BV,
+  foldrBV,
+  mapBV,
+  maybeDestructBV,
+  maybeDestructBV2,
+  maybeLDestructBV,
+  repeatBV,
+  undefined##,
+  zipWithBV,
+ )
+-- packing import
+import {-# SOURCE #-} Clash.Class.BitPack.Internal (bitToBool)
 import {-# SOURCE #-} Clash.Sized.Internal.BitVector (Bit, BitVector)
 
-import {-# SOURCE #-} qualified Clash.Class.BitPack.Internal as BP
-import {-# SOURCE #-} qualified Clash.Sized.Internal.BitVector as BV
-
-all1BV :: (KnownNat n) => BitVector n
-all1BV = complement# $ all0BV
-
-{-# ANN undefined## hasBlackBox #-}
-{-# CLASH_OPAQUE undefined## #-}
-undefined## :: Bit
-undefined## = BV.Bit 1 0
-
-undefined# :: (KnownNat n) => BitVector n
-undefined# = mapBV (\_ -> undefined##) (BV.BV 0 0)
+-- imported blackboxes for Bit and BitVector
+import {-# SOURCE #-} qualified Clash.Sized.Internal.BitVector as BB_BV (
+  and##,
+  complement##,
+  high,
+  low,
+  pack#,
+  split#,
+  (++#),
+ )
 
 reduceAnd# :: (KnownNat n) => BitVector n -> Bit
-reduceAnd# bv = foldrBV (&) BV.high bv
+reduceAnd# bv = foldrBV BB_BV.and## BB_BV.high bv
 
 reduceOr# :: (KnownNat n) => BitVector n -> Bit
-reduceOr# bv = foldrBV BV.or## BV.low bv
+reduceOr# bv = foldrBV or## BB_BV.low bv
 
 reduceXor# :: (KnownNat n) => BitVector n -> Bit
-reduceXor# bv = foldrBV BV.xor## BV.low bv
+reduceXor# bv = foldrBV xor## BB_BV.low bv
 
 msb# :: (KnownNat n) => BitVector n -> Bit
-msb# bv = maybeDestructBV const BV.low bv
+msb# bv = maybeDestructBV go BB_BV.low bv
+ where
+  go a _ = a
 
 lsb# :: (KnownNat n) => BitVector n -> Bit
-lsb# bv = maybeLDestructBV go BV.low bv
+lsb# bv = maybeLDestructBV go BB_BV.low bv
  where
   go _ a = a
 
@@ -52,16 +64,16 @@ shiftlBV
     forall n. (KnownNat n) => BitVector n -> BitVector n
 shiftlBV bv = maybeDestructBV go all0BV bv
  where
-  go _ bs = bs BV.++# BV.pack# BV.low
+  go _ bs = bs BB_BV.++# BB_BV.pack# BB_BV.low
 shiftrBV bv = maybeLDestructBV go all0BV bv
  where
-  go bs _ = BV.pack# BV.low BV.++# bs
+  go bs _ = BB_BV.pack# BB_BV.low BB_BV.++# bs
 rotatelBV bv = maybeDestructBV go all0BV bv
  where
-  go b bs = bs BV.++# BV.pack# b
+  go b bs = bs BB_BV.++# BB_BV.pack# b
 rotaterBV bv = maybeLDestructBV go all0BV bv
  where
-  go bs b = BV.pack# b BV.++# bs
+  go bs b = BB_BV.pack# b BB_BV.++# bs
 
 -- TODO only use synthesizable code
 shiftL#
@@ -103,6 +115,9 @@ rotateR# bv i =
         rotateR# (rotaterBV bv) (i - 1)
 
 -- BitVectors
+growBV ::
+  forall m n. (KnownNat n, KnownNat m, m <= n) => BitVector m -> BitVector n
+growBV bv = (all0BV :: BitVector (n - m)) BB_BV.++# bv
 
 plus# ::
   forall m n.
@@ -110,8 +125,8 @@ plus# ::
   BitVector m -> BitVector n -> BitVector (Max m n + 1)
 plus# a b = a1 +# b1
  where
-  a1 = all0BV @((Max m n) + 1 - m) BV.++# a
-  b1 = all0BV @((Max m n) + 1 - n) BV.++# b
+  a1 = growBV a
+  b1 = growBV b
 
 minus# ::
   forall m n.
@@ -122,27 +137,41 @@ minus# ::
     (Max m n + 1)
 minus# a b = a1 -# b1
  where
-  a1 = all0BV @((Max m n) + 1 - m) BV.++# a
-  b1 = all0BV @((Max m n) + 1 - n) BV.++# b
+  a1 = growBV a
+  b1 = growBV b
+
+truncateB# :: forall a b. (KnownNat a) => BitVector (a + b) -> BitVector a
+truncateB# bv = b
+ where
+  (_, b) = BB_BV.split# bv
+
+minBound# :: (KnownNat n) => BitVector n
+minBound# = all0BV
+
+maxBound# :: (KnownNat n) => BitVector n
+maxBound# = all1BV
+
+undefined# :: (KnownNat n) => BitVector n
+undefined# = repeatBV (undefined##)
 
 times# ::
   forall m n.
   (KnownNat m, KnownNat n) => BitVector m -> BitVector n -> BitVector (m + n)
 times# a b = a1 *# b1
  where
-  a1 = all0BV @n BV.++# a
-  b1 = all0BV @m BV.++# b
+  a1 = growBV a
+  b1 = growBV b
 
-(+#) ::
-  forall n. (KnownNat n) => BitVector n -> BitVector n -> BitVector n
+(-#)
+  , (+#)
+  , (/#)
+  , (*#)
+  , (%#) ::
+    forall n. (KnownNat n) => BitVector n -> BitVector n -> BitVector n
 (+#) a b = fst $ adder a b
-
-(-#) ::
-  forall n. (KnownNat n) => BitVector n -> BitVector n -> BitVector n
 (-#) a b = a +# (negate# b)
-
-(*#) ::
-  forall n. (KnownNat n) => BitVector n -> BitVector n -> BitVector n
+(/#) a b = undefined
+(%#) a b = undefined
 (*#) a b = shiftAdd b
  where
   shiftAdd ::
@@ -151,31 +180,31 @@ times# a b = a1 *# b1
    where
     go bb c = (shiftlBV (shiftAdd bb)) +# (andA c)
     def = all0BV
-  andA i = mapBV (& i) a
+  andA i = mapBV (`BB_BV.and##` i) a
 
 negate# :: forall n. (KnownNat n) => BitVector n -> BitVector n
 negate# bv = fst $ negateBV bv
 
 negateBV :: forall n. (KnownNat n) => BitVector n -> (BitVector n, Bit)
-negateBV bv = maybeDestructBV go (all0BV, BV.high) bv
+negateBV bv = maybeDestructBV go (all0BV, BB_BV.high) bv
  where
   go b bs =
     let
       (r, c) = negateBV bs
-      (bitr, bitc) = halfAdder (n b) c
+      (bitr, bitc) = halfAdder (BB_BV.complement## b) c
      in
-      ((BV.pack# bitr) BV.++# r, bitc)
+      ((BB_BV.pack# bitr) BB_BV.++# r, bitc)
 
 adder ::
   forall n. (KnownNat n) => BitVector n -> BitVector n -> (BitVector n, Bit)
-adder bv1 bv2 = maybeDestructBV2 go (all0BV, BV.low) bv1 bv2
+adder bv1 bv2 = maybeDestructBV2 go (all0BV, BB_BV.low) bv1 bv2
  where
   go b1 b2 bs1 bs2 =
     let
       (r, c) = adder bs1 bs2
       (bitr, bitc) = fullAdder b1 b2 c
      in
-      ((BV.pack# bitr) BV.++# r, bitc)
+      ((BB_BV.pack# bitr) BB_BV.++# r, bitc)
 
 fullAdder :: Bit -> Bit -> Bit -> (Bit, Bit)
 fullAdder a b c = (r2, c_out)
@@ -187,16 +216,16 @@ fullAdder a b c = (r2, c_out)
 halfAdder :: Bit -> Bit -> (Bit, Bit)
 halfAdder b1 b2 = (r, c)
  where
-  c = b1 & b2
+  c = b1 `BB_BV.and##` b2
   r = b1 `xor##` b2
 
 and# ::
   forall n. (KnownNat n) => BitVector n -> BitVector n -> BitVector n
-and# = zipWithBV (&)
+and# = zipWithBV BB_BV.and##
 
 complement# ::
   forall n. (KnownNat n) => BitVector n -> BitVector n
-complement# = mapBV (n)
+complement# = mapBV (BB_BV.complement##)
 
 or# ::
   forall n. (KnownNat n) => BitVector n -> BitVector n -> BitVector n
@@ -208,7 +237,7 @@ xor# = zipWithBV (xor##)
 
 neq# ::
   (KnownNat n) => BitVector n -> BitVector n -> Bool
-neq# bv1 bv2 = bitToBool $ n $ eqBV bv1 bv2
+neq# bv1 bv2 = bitToBool $ BB_BV.complement## $ eqBV bv1 bv2
 
 eq# ::
   forall n. (KnownNat n) => BitVector n -> BitVector n -> Bool
@@ -249,36 +278,29 @@ neq## b1 b2 = bitToBool $ xor## b1 b2
 lt## :: Bit -> Bit -> Bool
 lt## b1 b2 = bitToBool $ lt### b1 b2
 ge## :: Bit -> Bit -> Bool
-ge## b1 b2 = bitToBool $ n (lt### b1 b2)
+ge## b1 b2 = bitToBool $ BB_BV.complement## (lt### b1 b2)
 gt## :: Bit -> Bit -> Bool
 gt## b1 b2 = bitToBool $ gt### b1 b2
 le## :: Bit -> Bit -> Bool
-le## b1 b2 = bitToBool $ n (b1 `gt###` b2)
+le## b1 b2 = bitToBool $ BB_BV.complement## (b1 `gt###` b2)
 
 -- expressed in base
 xor## :: Bit -> Bit -> Bit
-xor## b1 b2 = n $ eq### b1 b2
+xor## b1 b2 = BB_BV.complement## $ eq### b1 b2
 
 -- base (with only AND and NOT)
 eq### :: Bit -> Bit -> Bit
-eq### b1 b2 = (b1 & b2) `or##` (n b1 & n b2)
+eq### b1 b2 =
+  (b1 `BB_BV.and##` b2)
+    `or##` (BB_BV.complement## b1 `BB_BV.and##` BB_BV.complement## b2)
 
 or## :: Bit -> Bit -> Bit
-or## b1 b2 = n $ (n b1) & (n b2)
+or## b1 b2 =
+  BB_BV.complement## $
+    (BB_BV.complement## b1) `BB_BV.and##` (BB_BV.complement## b2)
 
 lt### :: Bit -> Bit -> Bit
-lt### b1 b2 = b2 & (n b1)
+lt### b1 b2 = b2 `BB_BV.and##` (BB_BV.complement## b1)
 
 gt### :: Bit -> Bit -> Bit
-gt### b1 b2 = b1 & (n b2)
-
-n :: Bit -> Bit
-n = BV.complement##
-
-(&) :: Bit -> Bit -> Bit
-(&) = BV.and##
-
-{-# ANN bitToBool hasBlackBox #-}
-{-# CLASH_OPAQUE bitToBool #-}
-bitToBool :: Bit -> Bool
-bitToBool b = BP.bitToBool b
+gt### b1 b2 = b1 `BB_BV.and##` (BB_BV.complement## b2)

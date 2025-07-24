@@ -128,6 +128,9 @@ import qualified Clash.Sized.Internal.BitVector as BV
 import Clash.XException
   (ShowX (..), NFDataX (..), errorX, showsPrecXWith, rwhnfX)
 
+import qualified Clash.Aiger.Signed as AIGER
+import Clash.Annotations.AigerSubstitution (aigerSubstitution)
+
 {- $setup
 >>> :m -Prelude
 >>> import Clash.Prelude

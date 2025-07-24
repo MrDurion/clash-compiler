@@ -12,7 +12,7 @@ import Data.HashSet (HashSet)
 import Data.List ((!?))
 import Data.Monoid (Ap (..))
 import Data.Text (Text)
-import Debug.Trace (trace, traceM)
+import Debug.Trace (traceM)
 import GHC.Data.Maybe (orElse)
 import GHC.Num (integerToInt)
 import Prelude hiding (lookup)
@@ -445,21 +445,20 @@ convertExprToAigerExpr e = case e of
   (Identifier eI (Just a)) -> pure $ modifier (Pointer (toText eI)) a
   (Literal mhwt l) -> pure $ parseLiteral mhwt l
   (DataCon hwt _ ex) -> parseDataConE hwt ex
-  (DataTag _ _) -> trace ("TODO found " ++ show e) $ pure Empty
+  (DataTag _ _) -> error ("TODO found " ++ show e)
   (BlackBoxE n _ _ _ _ templateContext _) -> parseBlackBoxE n templateContext
   (ToBv _ _ e1) -> convertExprToAigerExpr e1
   (FromBv _ _ e1) -> convertExprToAigerExpr e1
-  (IfThenElse _ _ _) -> trace ("TODO found " ++ show e) $ pure Empty
-  (Noop) -> trace "TODO found Noop" $ pure Empty
+  (IfThenElse _ _ _) -> error ("TODO found " ++ show e)
+  (Noop) -> pure Empty
 
 parseLiteral :: Maybe (HWType, Size) -> Literal -> AigerExpr
-parseLiteral Nothing (NumLit i) = trace ("Num Literal without HWType found: " ++ show i) $ Empty
+parseLiteral Nothing (NumLit i) = error ("Num Literal without HWType found: " ++ show i)
 parseLiteral (Just (hwt, _)) (NumLit i) = case hwt of
   Unsigned n -> BitRange $ makeUnsigned i n
   Signed n -> BitRange $ makeSigned i n
   _ ->
-    trace ("Can not parse num literal with HWType " ++ show hwt) $
-      Empty
+    error ("Can not parse num literal with HWType " ++ show hwt)
 parseLiteral _ (BitLit b) =
   BitRange
     [ ( case b of
@@ -469,9 +468,9 @@ parseLiteral _ (BitLit b) =
       )
     ]
 parseLiteral _ (BoolLit b) = BitRange [AigerIndex 0 b]
-parseLiteral _ (BitVecLit i1 i2) = trace ("TODO bitVec literal found: " ++ show i1 ++ " " ++ show i2) $ Empty -- BitRange $ makeUnsigned i2 i1 -- TODO what does the two integers mean??
+parseLiteral _ (BitVecLit i1 i2) = error ("TODO bitVec literal found: " ++ show i1 ++ " " ++ show i2) -- BitRange $ makeUnsigned i2 i1 -- TODO what does the two integers mean??
 parseLiteral _ (VecLit ls) = Concat $ map (parseLiteral Nothing) ls -- TODO what about HWType pass on?
-parseLiteral _ (StringLit s) = trace ("TODO String literal found: " ++ s) $ Empty
+parseLiteral _ (StringLit s) = error ("TODO String literal found: " ++ s)
 
 makeUnsigned :: Integer -> Size -> [AigerIndex]
 makeUnsigned ii n =
@@ -514,6 +513,10 @@ parseDataConE h es = do
     Bit -> case es of
       [e] -> convertExprToAigerExpr e
       _ -> error "Multiple expressions in Bit DataCon"
+    Signed _ -> do
+      -- TODO what about different size than expressions?
+      aes <- mapM convertExprToAigerExpr es
+      pure $ Concat aes
     l -> error ("no parser implemented yet for DataCon " ++ show l)
 
 parseBlackBoxE :: Text -> BlackBoxContext -> AigerM AigerExpr
@@ -583,7 +586,9 @@ parseBlackBoxE n context =
         n1 <- getExpr 1
         n1E <- convertExprToAigerExpr n1
         pure $ LastRange 0 sz n1E
-      _ -> trace ("could not parse " ++ show n) $ pure Empty
+      _ ->
+        error
+          ("could not parse blackbox " ++ show n ++ "\n with context: " ++ show context)
   )
  where
   getExpr :: Int -> AigerM Expr
@@ -609,14 +614,14 @@ parseDeclaration :: Declaration -> AigerM ()
 parseDeclaration d = do
   case d of
     (Assignment i _ e) -> do parseAssignment (Pointer (toText i)) e
-    (CondAssignment _ _ _ _ _) -> trace ("DECL: " ++ show d) $ pure ()
-    (InstDecl _ _ _ _ _ _ _) -> trace ("DECL: " ++ show d) $ pure ()
+    (CondAssignment _ _ _ _ _) -> error ("DECL: " ++ show d)
+    (InstDecl _ _ _ _ _ _ _) -> error ("DECL: " ++ show d)
     (BlackBoxD n _ _ _ _ t) -> (parseBlackBoxD n t)
-    (CompDecl _ _) -> trace ("DECL: " ++ show d) $ pure ()
+    (CompDecl _ _) -> error ("DECL: " ++ show d)
     (NetDecl' _ _ _ _) -> pure ()
-    (TickDecl _) -> trace ("DECL: " ++ show d) $ pure ()
-    (Seq _) -> trace ("DECL: " ++ show d) $ pure ()
-    (ConditionalDecl _ _) -> trace ("DECL: " ++ show d) $ pure ()
+    (TickDecl _) -> error ("DECL: " ++ show d)
+    (Seq _) -> error ("DECL: " ++ show d)
+    (ConditionalDecl _ _) -> error ("DECL: " ++ show d)
  where
   parseBlackBoxD n t = do
     aigerExpr <- parseBlackBoxE n t

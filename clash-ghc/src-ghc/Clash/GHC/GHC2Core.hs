@@ -96,7 +96,7 @@ import GHC.Types.Id.Info (IdDetails (..), unfoldingInfo)
 import GHC.Types.Literal (Literal (..), LitNumType (..), literalType)
 import GHC.Unit.Module (moduleName, moduleNameString)
 import GHC.Types.Name
-  (Name, nameModule_maybe, nameOccName, nameUnique, getSrcSpan)
+  (Name, nameModule_maybe, nameOccName, nameUnique, getSrcSpan, getName)
 import GHC.Builtin.Names  (integerTyConKey, naturalTyConKey)
 import GHC.Types.Name.Occurrence (occNameString)
 import GHC.Data.Pair (Pair (..))
@@ -596,7 +596,7 @@ coreToTerm primMap aigerMap unlocs = term
       
     var x = 
         --FIXME lookup aiger substitutions and do `var aigerX`
-        case lookup x aigerMap of
+        case lookup (getName x) aigerMap of
             Just sub -> C.Var <$> (C.mkGlobalId <$> (coreToType $ varType x) <*> (coreToName (id) (getUnique) (qualifiedNameStringM) (sub)))
             (Nothing) -> var' x
         

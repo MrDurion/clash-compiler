@@ -1,5 +1,13 @@
 # These are all the primitive items in common. thought I needed them?
 - Primitive:
+    name: GHC.Prim.plusInt8#
+    primType: Function
+    workInfo: Never
+- Primitive:
+    name: GHC.Prim.subInt8#
+    primType: Function
+    workInfo: Never
+- Primitive:
     name: GHC.Types.MkCoercible
     primType: Constructor
     workInfo: Never

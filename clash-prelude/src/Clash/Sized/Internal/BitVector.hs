@@ -203,7 +203,6 @@ import Clash.Sized.Internal.Mod
 
 -- FIXME import sorting
 import qualified Clash.Aiger.BitVector as AIGER
-import qualified Clash.Aiger.Util as AIGER_UTIL
 import Clash.Annotations.AigerSubstitution
 
 import {-# SOURCE #-} qualified Clash.Sized.Vector         as V
@@ -791,14 +790,14 @@ instance KnownNat n => Bounded (BitVector n) where
 minBound# :: BitVector n
 minBound# = BV 0 0
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN minBound# (aigerSubstitution 'AIGER_UTIL.all0BV) #-}
+{-# ANN minBound# (aigerSubstitution 'AIGER.minBound#) #-}
 {-# CLASH_OPAQUE minBound# #-}
 {-# ANN minBound# hasBlackBox #-}
 
 maxBound# :: forall n. KnownNat n => BitVector n
 maxBound# = let m = 1 `shiftL` natToNum @n in BV 0 (m-1)
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN minBound# (aigerSubstitution 'AIGER.all1BV) #-}
+{-# ANN minBound# (aigerSubstitution 'AIGER.maxBound#) #-}
 {-# CLASH_OPAQUE maxBound# #-}
 {-# ANN maxBound# hasBlackBox #-}
 
@@ -1401,6 +1400,7 @@ truncateB# = \(BV msk i) -> BV (msk `mod` m) (i `mod` m)
   where m = 1 `shiftL` fromInteger (natVal (Proxy @a))
 #endif
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN truncateB# (aigerSubstitution ('AIGER.truncateB#)) #-}
 {-# CLASH_OPAQUE truncateB# #-}
 {-# ANN truncateB# hasBlackBox #-}
 

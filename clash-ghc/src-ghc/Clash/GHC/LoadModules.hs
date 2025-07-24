@@ -206,7 +206,9 @@ import           Clash.Annotations.BitRepresentation.Internal
 
 import           Clash.Signal.Internal
 import Clash.Annotations.AigerSubstitution (AigerSubstitution(..))
-import Clash.Primitives.Util (generateAigerSubstitutionMap, AigerSubstitutionMap)
+import Clash.Primitives.Util (generateAigerSubstitutionMap, thn2ghcn, AigerSubstitutionMap)
+
+import qualified Clash.Aiger.Prim as AIGER_PRIM
 
 ghcLibDir :: IO FilePath
 #ifdef USE_GHC_PATHS
@@ -646,11 +648,15 @@ loadModules startAction useColor hdl modName dflagsM idirs = do
     topSyn     <- map fst <$> findSynthesizeAnnotations rootIds
     benchAnn   <- findTestBenches rootIds
     reprs'     <- findCustomReprAnnotations
-    aigerSubs <- case hdl of
-      AIGER -> findAigerSubstitutionAnnotations allBinderIds
+    ghcPrimSubs<- case hdl of
+      AIGER -> getGhcPrimAigerSubs
       _ -> pure []
-    let exclude things from = filter (\a -> not $ elem a things) from
-    let allBinderIdsWithoutSubstitution = exclude (fst $ unzip aigerSubs) allBinderIds
+    annAigerSubs <- case hdl of
+      AIGER -> (findAigerSubstitutionAnnotations allBinderIds) 
+      _ -> pure []
+    let aigerSubs = annAigerSubs ++ ghcPrimSubs
+    --TODO
+    let allBinderIdsWithoutSubstitution = filter (\a -> not $ elem (Name.getName a) $ fst $ unzip aigerSubs) allBinderIds
     primGuards <- findPrimitiveGuardAnnotations allBinderIdsWithoutSubstitution
     aigerSubstitutes <- generateAigerSubstitutionMap aigerSubs
     let
@@ -931,12 +937,20 @@ findPrimitiveGuardAnnotations bndrs = do
 findAigerSubstitutionAnnotations
   :: GHC.GhcMonad m
   => [CoreSyn.CoreBndr]
-  -> m [(CoreSyn.CoreBndr, AigerSubstitution)]
+  -> m [(Name.Name, AigerSubstitution)]
 findAigerSubstitutionAnnotations bndrs = do
   anns0 <- findNamedAnnotations bndrs
-  pure $ combineAnnotationsWith (const (Right)) "AigerSubstitution" bndrs anns0
+  let a = combineAnnotationsWith (const (Right)) "AigerSubstitution" bndrs anns0
+  pure $ map (go) a
+ where
+  go (cb, as) = (Name.getName cb, as)
 
-
+getGhcPrimAigerSubs :: GHC.GhcMonad m =>  m [(Name.Name, AigerSubstitution)]
+getGhcPrimAigerSubs = mapM thNameToGHCName AIGER_PRIM.ghcPrimAigerSubstitutions 
+ where
+  thNameToGHCName (a, b) = do
+    ghcn <- thn2ghcn a
+    pure (ghcn,b)
 
 -- | Find annotations of type @DataReprAnn@ and convert them to @DataRepr'@
 findCustomReprAnnotations

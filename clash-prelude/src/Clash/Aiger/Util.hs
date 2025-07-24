@@ -1,19 +1,43 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -fplugin GHC.TypeLits.KnownNat.Solver #-}
 {-# OPTIONS_GHC -fplugin GHC.TypeLits.Normalise #-}
 
 module Clash.Aiger.Util where
 
-import GHC.TypeLits (KnownNat, type (-), type (<=))
+import GHC.TypeLits (KnownNat, type (+), type (-), type (<=))
 
+import Clash.Annotations.Primitive (hasBlackBox)
 import Clash.Promoted.Nat (SNat (..), SNatLE (..), compareSNat)
 import {-# SOURCE #-} Clash.Sized.Internal.BitVector (Bit, BitVector)
 
-import {-# SOURCE #-} qualified Clash.Sized.Internal.BitVector as BV
+-- basic blackboxes imported
+import {-# SOURCE #-} qualified Clash.Sized.Internal.BitVector as BV (
+  Bit (..),
+  BitVector (..),
+  high,
+  low,
+  pack#,
+  split#,
+  unpack#,
+  (++#),
+ )
 
-all0BV :: forall n. (KnownNat n) => BitVector n
-all0BV = mapBV (\_ -> BV.low) (BV.BV 0 0)
+{-# ANN undefined## hasBlackBox #-}
+{-# CLASH_OPAQUE undefined## #-}
+undefined## :: Bit
+undefined## = BV.Bit 1 0
+
+comp ::
+  forall n m d.
+  (KnownNat n, KnownNat m) =>
+  ((KnownNat n, KnownNat m, (m + 1) <= n) => d) ->
+  ((KnownNat n, KnownNat m, n <= m) => d) ->
+  d
+comp f1 f2 = case compareSNat (SNat :: SNat n) (SNat :: SNat m) of
+  (SNatGT) -> f1
+  (SNatLE) -> f2
 
 maybeBV ::
   forall n d.
@@ -21,16 +45,12 @@ maybeBV ::
   ((KnownNat n, 1 <= n) => d) ->
   ((KnownNat n, n <= 0) => d) ->
   d
-maybeBV f d = case compareSNat (SNat :: SNat n) (SNat :: SNat 0) of
-  (SNatGT) -> f
-  (SNatLE) -> d
+maybeBV f d = comp @n @0 f d
 
 destructBV ::
   forall n. (KnownNat n, 1 <= n) => BitVector n -> (Bit, BitVector (n - 1))
 destructBV bv = (bit, bs)
  where
-  -- bs :: BitVector (n - 1) = lastBV @1 bv
-  -- b :: BitVector (1) = firstBV @(n - 1) bv
   (b :: BitVector 1, bs :: BitVector (n - 1)) = BV.split# bv
   bit = BV.unpack# b
 
@@ -38,8 +58,6 @@ rdestructBV ::
   forall n. (KnownNat n, 1 <= n) => BitVector n -> (BitVector (n - 1), Bit)
 rdestructBV bv = (bs, bit)
  where
-  -- bs :: BitVector (n - 1) = firstBV @1 bv
-  -- b :: BitVector (1) = lastBV @(n - 1) bv
   (bs :: BitVector (n - 1), b :: BitVector 1) = BV.split# bv
   bit = BV.unpack# b
 
@@ -96,6 +114,15 @@ mapBV f bv = maybeDestructBV go bv bv
  where
   go b bs = BV.pack# (f b) BV.++# mapBV f bs
 
+repeatBV :: forall n. (KnownNat n) => Bit -> BitVector n
+repeatBV f = mapBV (\_ -> f) (BV.BV 0 0)
+
+all0BV :: forall n. (KnownNat n) => BitVector n
+all0BV = repeatBV BV.low
+
+all1BV :: (KnownNat n) => BitVector n
+all1BV = repeatBV BV.high
+
 zipWithBV ::
   forall n.
   (KnownNat n) => (Bit -> Bit -> Bit) -> BitVector n -> BitVector n -> BitVector n
@@ -112,7 +139,3 @@ foldlBV :: forall n b. (KnownNat n) => (Bit -> b -> b) -> b -> BitVector n -> b
 foldlBV f d bv = maybeLDestructBV go d bv
  where
   go bs b = f b (foldrBV f d bs)
-
-growBV ::
-  forall m n. (KnownNat n, KnownNat m, m <= n) => BitVector m -> BitVector n
-growBV bv = (all0BV :: BitVector (n - m)) BV.++# bv

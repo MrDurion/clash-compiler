@@ -3,9 +3,14 @@
 module Clash.Annotations.AigerSubstitution where
 
 import Data.Data (Data)
-import Language.Haskell.TH (Name)
+import Language.Haskell.TH (Name, mkName)
 
 data AigerSubstitution = AigerSubstitution Name deriving (Data, Show)
+data PrimitiveAigerSubstitution = PrimitiveAigerSubstitution String
+  deriving (Data, Show)
+
+primitiveAigerSubstitution :: String -> PrimitiveAigerSubstitution
+primitiveAigerSubstitution n = PrimitiveAigerSubstitution n
 
 aigerSubstitution :: Name -> AigerSubstitution
 aigerSubstitution n = AigerSubstitution n
