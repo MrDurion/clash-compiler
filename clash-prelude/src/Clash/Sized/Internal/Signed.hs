@@ -128,7 +128,7 @@ import qualified Clash.Sized.Internal.BitVector as BV
 import Clash.XException
   (ShowX (..), NFDataX (..), errorX, showsPrecXWith, rwhnfX)
 
-import qualified Clash.Aiger.Signed as AIGER
+import {-# SOURCE #-} qualified Clash.Aiger.Signed as AIGER
 import Clash.Annotations.AigerSubstitution (aigerSubstitution)
 
 {- $setup
@@ -256,12 +256,14 @@ instance Eq (Signed n) where
   (/=) = neq#
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN eq# (aigerSubstitution 'AIGER.eq) #-}
 {-# CLASH_OPAQUE eq# #-}
 {-# ANN eq# hasBlackBox #-}
 eq# :: Signed n -> Signed n -> Bool
 eq# (S v1) (S v2) = v1 == v2
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN neq# (aigerSubstitution 'AIGER.neq) #-}
 {-# CLASH_OPAQUE neq# #-}
 {-# ANN neq# hasBlackBox #-}
 neq# :: Signed n -> Signed n -> Bool
@@ -275,18 +277,22 @@ instance Ord (Signed n) where
 
 lt#,ge#,gt#,le# :: Signed n -> Signed n -> Bool
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN lt# (aigerSubstitution 'AIGER.lt) #-}
 {-# CLASH_OPAQUE lt# #-}
 {-# ANN lt# hasBlackBox #-}
 lt# (S n) (S m) = n < m
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN ge# (aigerSubstitution 'AIGER.ge) #-}
 {-# CLASH_OPAQUE ge# #-}
 {-# ANN ge# hasBlackBox #-}
 ge# (S n) (S m) = n >= m
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN gt# (aigerSubstitution 'AIGER.gt) #-}
 {-# CLASH_OPAQUE gt# #-}
 {-# ANN gt# hasBlackBox #-}
 gt# (S n) (S m) = n > m
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN le# (aigerSubstitution 'AIGER.le) #-}
 {-# CLASH_OPAQUE le# #-}
 {-# ANN le# hasBlackBox #-}
 le# (S n) (S m) = n <= m
@@ -405,6 +411,7 @@ instance KnownNat n => Num (Signed n) where
 
 (+#), (-#), (*#) :: forall n . KnownNat n => Signed n -> Signed n -> Signed n
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN (+#) (aigerSubstitution '(AIGER.+)) #-}
 {-# CLASH_OPAQUE (+#) #-}
 {-# ANN (+#) hasBlackBox #-}
 (+#) =
@@ -420,6 +427,7 @@ instance KnownNat n => Num (Signed n) where
   m = 1 `shiftL0` fromInteger (natVal (Proxy @n) -1)
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN (-#) (aigerSubstitution '(AIGER.-)) #-}
 {-# CLASH_OPAQUE (-#) #-}
 {-# ANN (-#) hasBlackBox #-}
 (-#) =
@@ -435,6 +443,7 @@ instance KnownNat n => Num (Signed n) where
   m  = 1 `shiftL0` fromInteger (natVal (Proxy @n) -1)
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN (*#) (aigerSubstitution '(AIGER.*)) #-}
 {-# CLASH_OPAQUE (*#) #-}
 {-# ANN (*#) hasBlackBox #-}
 (*#) = \(S a) (S b) -> fromInteger_INLINE sz mB mask (a * b)
@@ -444,6 +453,7 @@ instance KnownNat n => Num (Signed n) where
 
 negate#,abs# :: forall n . KnownNat n => Signed n -> Signed n
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN negate# (aigerSubstitution 'AIGER.negate) #-}
 {-# CLASH_OPAQUE negate# #-}
 {-# ANN negate# hasBlackBox #-}
 negate# =
@@ -587,6 +597,7 @@ instance KnownNat n => Bits (Signed n) where
 
 and#,or#,xor# :: forall n . KnownNat n => Signed n -> Signed n -> Signed n
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN and# (aigerSubstitution 'AIGER.and) #-}
 {-# CLASH_OPAQUE and# #-}
 {-# ANN and# hasBlackBox #-}
 and# = \(S a) (S b) -> fromInteger_INLINE sz mB mask (a .&. b)
@@ -595,6 +606,7 @@ and# = \(S a) (S b) -> fromInteger_INLINE sz mB mask (a .&. b)
         mask = mB - 1
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN or# (aigerSubstitution 'AIGER.or) #-}
 {-# CLASH_OPAQUE or# #-}
 {-# ANN or# hasBlackBox #-}
 or# = \(S a) (S b) -> fromInteger_INLINE sz mB mask (a .|. b)
@@ -603,6 +615,7 @@ or# = \(S a) (S b) -> fromInteger_INLINE sz mB mask (a .|. b)
         mask = mB - 1
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN xor# (aigerSubstitution 'AIGER.xor) #-}
 {-# CLASH_OPAQUE xor# #-}
 {-# ANN xor# hasBlackBox #-}
 xor# = \(S a) (S b) -> fromInteger_INLINE sz mB mask (xor a b)
@@ -611,6 +624,7 @@ xor# = \(S a) (S b) -> fromInteger_INLINE sz mB mask (xor a b)
         mask = mB - 1
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN complement# (aigerSubstitution 'AIGER.complement) #-}
 {-# CLASH_OPAQUE complement# #-}
 {-# ANN complement# hasBlackBox #-}
 complement# :: forall n . KnownNat n => Signed n -> Signed n
@@ -699,6 +713,7 @@ instance Resize Signed where
   truncateB    = truncateB#
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN resize# (aigerSubstitution 'AIGER.resize) #-}
 {-# CLASH_OPAQUE resize# #-}
 {-# ANN resize# hasBlackBox #-}
 resize# :: forall m n . (KnownNat n, KnownNat m) => Signed n -> Signed m

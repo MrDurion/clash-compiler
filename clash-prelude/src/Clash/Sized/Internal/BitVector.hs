@@ -202,7 +202,9 @@ import Clash.XException
 import Clash.Sized.Internal.Mod
 
 -- FIXME import sorting
-import qualified Clash.Aiger.BitVector as AIGER
+import {-# SOURCE #-} qualified Clash.Aiger.BitVector as AIGER
+import {-# SOURCE #-} qualified Clash.Aiger.Bit as AIGER_BIT
+import {-# SOURCE #-} qualified Clash.Aiger.Base as AIGER_BASE
 import Clash.Annotations.AigerSubstitution
 
 import {-# SOURCE #-} qualified Clash.Sized.Vector         as V
@@ -272,6 +274,7 @@ data Bit =
 -- * Constructions
 -- ** Initialisation
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN high (aigerSubstitution 'AIGER_BASE.high) #-}
 {-# CLASH_OPAQUE high #-}
 {-# ANN high hasBlackBox #-}
 -- | logic '1'
@@ -279,6 +282,7 @@ high :: Bit
 high = Bit 0 1
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN low (aigerSubstitution 'AIGER_BASE.low) #-}
 {-# CLASH_OPAQUE low #-}
 {-# ANN low hasBlackBox #-}
 -- | logic '0'
@@ -319,14 +323,14 @@ instance Eq Bit where
 eq## :: Bit -> Bit -> Bool
 eq## b1 b2 = eq# (pack# b1) (pack# b2)
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN eq## (aigerSubstitution 'AIGER.eq##) #-}
+{-# ANN eq## (aigerSubstitution 'AIGER_BIT.eq) #-}
 {-# CLASH_OPAQUE eq## #-}
 {-# ANN eq## hasBlackBox #-}
 
 neq## :: Bit -> Bit -> Bool
 neq## b1 b2 = neq# (pack# b1) (pack# b2)
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN neq## (aigerSubstitution 'AIGER.neq##) #-}
+{-# ANN neq## (aigerSubstitution 'AIGER_BIT.neq) #-}
 {-# CLASH_OPAQUE neq## #-}
 {-# ANN neq## hasBlackBox #-}
 
@@ -339,22 +343,22 @@ instance Ord Bit where
 lt##,ge##,gt##,le## :: Bit -> Bit -> Bool
 lt## b1 b2 = lt# (pack# b1) (pack# b2)
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN lt## (aigerSubstitution 'AIGER.lt##) #-}
+{-# ANN lt## (aigerSubstitution 'AIGER_BIT.lt) #-}
 {-# CLASH_OPAQUE lt## #-}
 {-# ANN lt## hasBlackBox #-}
 ge## b1 b2 = ge# (pack# b1) (pack# b2)
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN ge## (aigerSubstitution 'AIGER.ge##) #-}
+{-# ANN ge## (aigerSubstitution 'AIGER_BIT.ge) #-}
 {-# CLASH_OPAQUE ge## #-}
 {-# ANN ge## hasBlackBox #-}
 gt## b1 b2 = gt# (pack# b1) (pack# b2)
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN gt## (aigerSubstitution 'AIGER.gt##) #-}
+{-# ANN gt## (aigerSubstitution 'AIGER_BIT.gt) #-}
 {-# CLASH_OPAQUE gt## #-}
 {-# ANN gt## hasBlackBox #-}
 le## b1 b2 = le# (pack# b1) (pack# b2)
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN le## (aigerSubstitution 'AIGER.le##) #-}
+{-# ANN le## (aigerSubstitution 'AIGER_BIT.le) #-}
 {-# CLASH_OPAQUE le## #-}
 {-# ANN le## hasBlackBox #-}
 
@@ -439,14 +443,14 @@ and## (Bit m1 v1) (Bit m2 v2) = Bit mask (v1 .&. v2 .&. complement mask)
 or## (Bit m1 v1) (Bit m2 v2) = Bit mask ((v1 .|. v2) .&. complement mask)
   where mask = m1 .&. complement v2 .|.  m1.&.m2  .|.  m2 .&. complement v1
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN or## (aigerSubstitution 'AIGER.or##) #-}
+{-# ANN or## (aigerSubstitution 'AIGER_BIT.or) #-}
 {-# CLASH_OPAQUE or## #-}
 {-# ANN or## hasBlackBox #-}
 
 xor## (Bit m1 v1) (Bit m2 v2) = Bit mask ((v1 `xor` v2) .&. complement mask)
   where mask = m1 .|. m2
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN xor## (aigerSubstitution 'AIGER.xor##) #-}
+{-# ANN xor## (aigerSubstitution 'AIGER_BIT.xor) #-}
 {-# CLASH_OPAQUE xor## #-}
 {-# ANN xor## hasBlackBox #-}
 
@@ -647,7 +651,7 @@ instance KnownNat n => Eq (BitVector n) where
   (/=) = neq#
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN eq# (aigerSubstitution 'AIGER.eq#) #-}
+{-# ANN eq# (aigerSubstitution 'AIGER.eq) #-}
 {-# CLASH_OPAQUE eq# #-}
 {-# ANN eq# hasBlackBox #-}
 eq# :: KnownNat n => BitVector n -> BitVector n -> Bool
@@ -655,7 +659,7 @@ eq# (BV 0 v1) (BV 0 v2 ) = v1 == v2
 eq# bv1 bv2 = undefErrorI "==" bv1 bv2
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN neq# (aigerSubstitution 'AIGER.neq#) #-}
+{-# ANN neq# (aigerSubstitution 'AIGER.neq) #-}
 {-# CLASH_OPAQUE neq# #-}
 {-# ANN neq# hasBlackBox #-}
 neq# :: KnownNat n => BitVector n -> BitVector n -> Bool
@@ -670,25 +674,25 @@ instance KnownNat n => Ord (BitVector n) where
 
 lt#,ge#,gt#,le# :: KnownNat n => BitVector n -> BitVector n -> Bool
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN lt# (aigerSubstitution 'AIGER.lt#) #-}
+{-# ANN lt# (aigerSubstitution 'AIGER.lt) #-}
 {-# CLASH_OPAQUE lt# #-}
 {-# ANN lt# hasBlackBox #-}
 lt# (BV 0 n) (BV 0 m) = n < m
 lt# bv1 bv2 = undefErrorI "<" bv1 bv2
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN ge# (aigerSubstitution 'AIGER.ge#) #-}
+{-# ANN ge# (aigerSubstitution 'AIGER.ge) #-}
 {-# CLASH_OPAQUE ge# #-}
 {-# ANN ge# hasBlackBox #-}
 ge# (BV 0 n) (BV 0 m) = n >= m
 ge# bv1 bv2 = undefErrorI ">=" bv1 bv2
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN gt# (aigerSubstitution 'AIGER.gt#) #-}
+{-# ANN gt# (aigerSubstitution 'AIGER.gt) #-}
 {-# CLASH_OPAQUE gt# #-}
 {-# ANN gt# hasBlackBox #-}
 gt# (BV 0 n) (BV 0 m) = n > m
 gt# bv1 bv2 = undefErrorI ">" bv1 bv2
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN le# (aigerSubstitution 'AIGER.le#) #-}
+{-# ANN le# (aigerSubstitution 'AIGER.le) #-}
 {-# CLASH_OPAQUE le# #-}
 {-# ANN le# hasBlackBox #-}
 le# (BV 0 n) (BV 0 m) = n <= m
@@ -790,14 +794,14 @@ instance KnownNat n => Bounded (BitVector n) where
 minBound# :: BitVector n
 minBound# = BV 0 0
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN minBound# (aigerSubstitution 'AIGER.minBound#) #-}
+{-# ANN minBound# (aigerSubstitution 'AIGER.minBound) #-}
 {-# CLASH_OPAQUE minBound# #-}
 {-# ANN minBound# hasBlackBox #-}
 
 maxBound# :: forall n. KnownNat n => BitVector n
 maxBound# = let m = 1 `shiftL` natToNum @n in BV 0 (m-1)
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN minBound# (aigerSubstitution 'AIGER.maxBound#) #-}
+{-# ANN minBound# (aigerSubstitution 'AIGER.maxBound) #-}
 {-# CLASH_OPAQUE maxBound# #-}
 {-# ANN maxBound# hasBlackBox #-}
 
@@ -815,7 +819,7 @@ instance KnownNat n => Num (BitVector n) where
 
 (+#),(-#),(*#) :: forall n . KnownNat n => BitVector n -> BitVector n -> BitVector n
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN (+#) (aigerSubstitution '(AIGER.+#)) #-}
+{-# ANN (+#) (aigerSubstitution '(AIGER.+)) #-}
 {-# CLASH_OPAQUE (+#) #-}
 {-# ANN (+#) hasBlackBox #-}
 (+#) = go
@@ -830,7 +834,7 @@ instance KnownNat n => Num (BitVector n) where
 #endif
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN (-#) (aigerSubstitution '(AIGER.-#)) #-}
+{-# ANN (-#) (aigerSubstitution '(AIGER.-)) #-}
 {-# CLASH_OPAQUE (-#) #-}
 {-# ANN (-#) hasBlackBox #-}
 (-#) = go
@@ -845,7 +849,7 @@ instance KnownNat n => Num (BitVector n) where
 #endif
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN (*#) (aigerSubstitution '(AIGER.*#)) #-}
+{-# ANN (*#) (aigerSubstitution '(AIGER.*)) #-}
 {-# CLASH_OPAQUE (*#) #-}
 {-# ANN (*#) hasBlackBox #-}
 (*#) = go
@@ -860,7 +864,7 @@ instance KnownNat n => Num (BitVector n) where
 #endif
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN negate# (aigerSubstitution 'AIGER.negate#) #-}
+{-# ANN negate# (aigerSubstitution 'AIGER.negate) #-}
 {-# CLASH_OPAQUE negate# #-}
 {-# ANN negate# hasBlackBox #-}
 negate# :: forall n . KnownNat n => BitVector n -> BitVector n
@@ -899,7 +903,6 @@ instance (KnownNat m, KnownNat n) => ExtendingNum (BitVector m) (BitVector n) wh
   mul = times#
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN plus# (aigerSubstitution 'AIGER.plus#) #-}
 {-# CLASH_OPAQUE plus# #-}
 {-# ANN plus# hasBlackBox #-}
 plus# :: (KnownNat m, KnownNat n) => BitVector m -> BitVector n -> BitVector (Max m n + 1)
@@ -907,7 +910,6 @@ plus# (BV 0 a) (BV 0 b) = BV 0 (a + b)
 plus# bv1 bv2 = undefErrorP "add" bv1 bv2
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN minus# (aigerSubstitution 'AIGER.minus#) #-}
 {-# CLASH_OPAQUE minus# #-}
 {-# ANN minus# hasBlackBox #-}
 minus# :: forall m n . (KnownNat m, KnownNat n) => BitVector m -> BitVector n
@@ -924,7 +926,6 @@ minus# = go
 #endif
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN times# (aigerSubstitution 'AIGER.times#) #-}
 {-# CLASH_OPAQUE times# #-}
 {-# ANN times# hasBlackBox #-}
 times# :: (KnownNat m, KnownNat n) => BitVector m -> BitVector n -> BitVector (m + n)
@@ -999,7 +1000,7 @@ countTrailingZerosBV = V.foldl (\l r -> if eq## r low then 1 + l else 0) 0 . V.b
 {-# INLINE countTrailingZerosBV #-}
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN reduceAnd# (aigerSubstitution 'AIGER.reduceAnd#) #-}
+{-# ANN reduceAnd# (aigerSubstitution 'AIGER.reduceAnd) #-}
 {-# CLASH_OPAQUE reduceAnd# #-}
 {-# ANN reduceAnd# hasBlackBox #-}
 reduceAnd# :: KnownNat n => BitVector n -> Bit
@@ -1020,7 +1021,7 @@ reduceAnd# bv@(BV m i) =
     maxI  = (2 ^ sz) - 1
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN reduceOr# (aigerSubstitution 'AIGER.reduceOr#) #-}
+{-# ANN reduceOr# (aigerSubstitution 'AIGER.reduceOr) #-}
 {-# CLASH_OPAQUE reduceOr# #-}
 {-# ANN reduceOr# hasBlackBox #-}
 reduceOr# :: KnownNat n => BitVector n -> Bit
@@ -1034,7 +1035,7 @@ reduceOr# bv@(BV m i) | defI /= 0 = Bit 0 1
   defI = i .&. (complementN m)
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN reduceXor# (aigerSubstitution 'AIGER.reduceXor#) #-}
+{-# ANN reduceXor# (aigerSubstitution 'AIGER.reduceXor) #-}
 {-# CLASH_OPAQUE reduceXor# #-}
 {-# ANN reduceXor# hasBlackBox #-}
 reduceXor# :: KnownNat n => BitVector n -> Bit
@@ -1088,7 +1089,7 @@ index# bv@(BV m v) i
                          ]
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN msb# (aigerSubstitution 'AIGER.msb#) #-}
+{-# ANN msb# (aigerSubstitution 'AIGER.msb) #-}
 {-# CLASH_OPAQUE msb# #-}
 {-# ANN msb# hasBlackBox #-}
 -- | MSB
@@ -1116,7 +1117,7 @@ msb# (BV m v)
 #endif
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN lsb# (aigerSubstitution 'AIGER.lsb#) #-}
+{-# ANN lsb# (aigerSubstitution 'AIGER.lsb) #-}
 {-# CLASH_OPAQUE lsb# #-}
 {-# ANN lsb# hasBlackBox #-}
 -- | LSB
@@ -1140,6 +1141,7 @@ slice# (BV msk i) m n = BV (shiftR (msk .&. mask) n')
 
 -- ** Concatenation
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN (++#) (aigerSubstitution '(AIGER_BASE.++#)) #-}
 {-# CLASH_OPAQUE (++#) #-}
 {-# ANN (++#) hasBlackBox #-}
 -- | Concatenate two 'BitVector's
@@ -1205,6 +1207,7 @@ setSlice# SNat =
   complementN = complementMod (natVal (Proxy @(m + 1 + i)))
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN split# (aigerSubstitution 'AIGER_BASE.split#) #-}
 {-# CLASH_OPAQUE split# #-}
 {-# ANN split# hasBlackBox #-}
 split#
@@ -1232,7 +1235,7 @@ split# (BV m i) =
 
 and#, or#, xor# :: forall n . KnownNat n => BitVector n -> BitVector n -> BitVector n
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN and# (aigerSubstitution 'AIGER.and#) #-}
+{-# ANN and# (aigerSubstitution 'AIGER.and) #-}
 {-# CLASH_OPAQUE and# #-}
 {-# ANN and# hasBlackBox #-}
 and# =
@@ -1243,7 +1246,7 @@ and# =
     complementN = complementMod (natVal (Proxy @n))
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN or# (aigerSubstitution 'AIGER.or#) #-}
+{-# ANN or# (aigerSubstitution 'AIGER.or) #-}
 {-# CLASH_OPAQUE or# #-}
 {-# ANN or# hasBlackBox #-}
 or# =
@@ -1254,7 +1257,7 @@ or# =
     complementN = complementMod (natVal (Proxy @n))
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN xor# (aigerSubstitution 'AIGER.xor#) #-}
+{-# ANN xor# (aigerSubstitution 'AIGER.xor) #-}
 {-# CLASH_OPAQUE xor# #-}
 {-# ANN xor# hasBlackBox #-}
 xor# =
@@ -1265,7 +1268,7 @@ xor# =
     complementN = complementMod (natVal (Proxy @n))
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN complement# (aigerSubstitution 'AIGER.complement#) #-}
+{-# ANN complement# (aigerSubstitution 'AIGER.complement) #-}
 {-# CLASH_OPAQUE complement# #-}
 {-# ANN complement# hasBlackBox #-}
 complement# :: forall n . KnownNat n => BitVector n -> BitVector n
@@ -1276,7 +1279,7 @@ shiftL#, shiftR#, rotateL#, rotateR#
   :: forall n . KnownNat n => BitVector n -> Int -> BitVector n
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN shiftL# (aigerSubstitution 'AIGER.shiftL#) #-}
+{-# ANN shiftL# (aigerSubstitution 'AIGER.shiftL) #-}
 {-# CLASH_OPAQUE shiftL# #-}
 {-# ANN shiftL# hasBlackBox #-}
 shiftL# = \(BV msk v) i ->
@@ -1296,7 +1299,7 @@ shiftL# = \(BV msk v) i ->
 #endif
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN shiftR# (aigerSubstitution 'AIGER.shiftR#) #-}
+{-# ANN shiftR# (aigerSubstitution 'AIGER.shiftR) #-}
 {-# CLASH_OPAQUE shiftR# #-}
 {-# ANN shiftR# hasBlackBox #-}
 shiftR# (BV m v) i
@@ -1305,7 +1308,7 @@ shiftR# (BV m v) i
   | otherwise = BV (shiftR m i) (shiftR v i)
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN rotateL# (aigerSubstitution 'AIGER.rotateL#) #-}
+{-# ANN rotateL# (aigerSubstitution 'AIGER.rotateL) #-}
 {-# CLASH_OPAQUE rotateL# #-}
 {-# ANN rotateL# hasBlackBox #-}
 rotateL# =
@@ -1342,7 +1345,7 @@ rotateL# =
 #endif
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN rotateR# (aigerSubstitution 'AIGER.rotateR#) #-}
+{-# ANN rotateR# (aigerSubstitution 'AIGER.rotateR) #-}
 {-# CLASH_OPAQUE rotateR# #-}
 {-# ANN rotateR# hasBlackBox #-}
 rotateR# =
@@ -1400,7 +1403,7 @@ truncateB# = \(BV msk i) -> BV (msk `mod` m) (i `mod` m)
   where m = 1 `shiftL` fromInteger (natVal (Proxy @a))
 #endif
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN truncateB# (aigerSubstitution ('AIGER.truncateB#)) #-}
+{-# ANN truncateB# (aigerSubstitution ('AIGER.truncateB)) #-}
 {-# CLASH_OPAQUE truncateB# #-}
 {-# ANN truncateB# hasBlackBox #-}
 

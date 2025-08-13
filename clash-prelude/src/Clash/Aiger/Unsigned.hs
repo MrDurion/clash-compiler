@@ -1,75 +1,21 @@
-{-# OPTIONS_GHC -fplugin GHC.TypeLits.KnownNat.Solver #-}
-{-# OPTIONS_GHC -fplugin GHC.TypeLits.Normalise #-}
+module Clash.Aiger.Unsigned (
+  -- Bits
+  and,
+  or,
+  xor,
+  complement,
+  -- Num
+  (+),
+  (-),
+  (*),
+  negate,
+  -- Resize
+  resize,
+)
+where
 
-module Clash.Aiger.Unsigned where
+import Prelude hiding (and, negate, or, (*), (+), (-))
 
-import GHC.TypeLits (KnownNat, type (+), type (-), type (<=))
-
-import Clash.Aiger.Util (comp)
-import {-# SOURCE #-} Clash.Sized.Internal.BitVector (BitVector)
-import {-# SOURCE #-} Clash.Sized.Internal.Unsigned (
-  Unsigned,
-  pack#,
-  unpack#,
- )
-
-import qualified Clash.Aiger.BitVector as BV (
-  and#,
-  complement#,
-  growBV,
-  or#,
-  truncateB#,
-  xor#,
-  (*#),
-  (+#),
-  (-#),
- )
-
-inBV ::
-  (KnownNat m, KnownNat n) =>
-  (BitVector m -> BitVector n) -> Unsigned m -> Unsigned n
-inBV f a = unpack# $ f (pack# a)
-
-inBV2 ::
-  (KnownNat n) =>
-  (BitVector n -> BitVector n -> BitVector n) ->
-  Unsigned n ->
-  Unsigned n ->
-  Unsigned n
-inBV2 f a b = unpack# $ pack# a `f` pack# b
-
--- Substitutions
-
-xor# :: (KnownNat n) => Unsigned n -> Unsigned n -> Unsigned n
-xor# = inBV2 BV.xor#
-
-or# :: (KnownNat n) => Unsigned n -> Unsigned n -> Unsigned n
-or# = inBV2 BV.or#
-
-and# :: (KnownNat n) => Unsigned n -> Unsigned n -> Unsigned n
-and# = inBV2 BV.and#
-
-complement# :: (KnownNat n) => Unsigned n -> Unsigned n
-complement# = inBV BV.complement#
-
-(-#) :: (KnownNat n) => Unsigned n -> Unsigned n -> Unsigned n
-(-#) = inBV2 (BV.-#)
-
-(+#) :: (KnownNat n) => Unsigned n -> Unsigned n -> Unsigned n
-(+#) = inBV2 (BV.+#)
-
-(*#) :: (KnownNat n) => Unsigned n -> Unsigned n -> Unsigned n
-(*#) = inBV2 (BV.*#)
-
-resize# :: forall n m. (KnownNat n, KnownNat m) => Unsigned n -> Unsigned m
-resize# = inBV go
- where
-  go :: BitVector n -> BitVector m
-  go = comp @n @m trunc grow
-
-  trunc ::
-    (m <= n) => BitVector (m + (n - m)) -> BitVector m
-  trunc = BV.truncateB#
-
-  grow :: (n <= m) => BitVector n -> BitVector m
-  grow = BV.growBV
+import Clash.Aiger.Unsigned.Bits
+import Clash.Aiger.Unsigned.Num
+import Clash.Aiger.Unsigned.Resize

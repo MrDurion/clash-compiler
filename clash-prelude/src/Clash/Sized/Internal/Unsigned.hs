@@ -147,7 +147,7 @@ import Clash.Sized.Internal.Mod
 import Clash.XException
   (ShowX (..), NFDataX (..), errorX, showsPrecXWith, rwhnfX)
 
-import qualified Clash.Aiger.Unsigned as AIGER
+import {-# SOURCE #-} qualified Clash.Aiger.Unsigned as AIGER
 import Clash.Annotations.AigerSubstitution (aigerSubstitution)
 
 {- $setup
@@ -417,7 +417,7 @@ instance KnownNat n => Num (Unsigned n) where
 
 (+#),(-#),(*#) :: forall n . KnownNat n => Unsigned n -> Unsigned n -> Unsigned n
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN (+#) (aigerSubstitution '(AIGER.+#)) #-}
+{-# ANN (+#) (aigerSubstitution '(AIGER.+)) #-}
 {-# CLASH_OPAQUE (+#) #-}
 {-# ANN (+#) hasBlackBox #-}
 (+#) = \(U i) (U j) -> U (addMod m i j)
@@ -428,7 +428,7 @@ instance KnownNat n => Num (Unsigned n) where
 #endif
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN (-#) (aigerSubstitution '(AIGER.-#)) #-}
+{-# ANN (-#) (aigerSubstitution '(AIGER.-)) #-}
 {-# CLASH_OPAQUE (-#) #-}
 {-# ANN (-#) hasBlackBox #-}
 (-#) = \(U i) (U j) -> U (subMod m i j)
@@ -439,7 +439,7 @@ instance KnownNat n => Num (Unsigned n) where
 #endif
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN (*#) (aigerSubstitution '(AIGER.*#)) #-}
+{-# ANN (*#) (aigerSubstitution '(AIGER.*)) #-}
 {-# CLASH_OPAQUE (*#) #-}
 {-# ANN (*#) hasBlackBox #-}
 (*#) = \(U i) (U j) -> U (mulMod2 m i j)
@@ -450,6 +450,7 @@ instance KnownNat n => Num (Unsigned n) where
 #endif
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN negate# (aigerSubstitution 'AIGER.negate) #-}
 {-# CLASH_OPAQUE negate# #-}
 {-# ANN negate# hasBlackBox #-}
 negate# :: forall n . KnownNat n => Unsigned n -> Unsigned n
@@ -567,28 +568,28 @@ instance KnownNat n => Bits (Unsigned n) where
   popCount u        = popCount (pack# u)
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN and# (aigerSubstitution 'AIGER.and#) #-}
+{-# ANN and# (aigerSubstitution 'AIGER.and) #-}
 {-# CLASH_OPAQUE and# #-}
 {-# ANN and# hasBlackBox #-}
 and# :: KnownNat n => Unsigned n -> Unsigned n -> Unsigned n
 and# (U v1) (U v2) = U (v1 .&. v2)
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN or# (aigerSubstitution 'AIGER.or#) #-}
+{-# ANN or# (aigerSubstitution 'AIGER.or) #-}
 {-# CLASH_OPAQUE or# #-}
 {-# ANN or# hasBlackBox #-}
 or# :: KnownNat n => Unsigned n -> Unsigned n -> Unsigned n
 or# (U v1) (U v2) = U (v1 .|. v2)
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN xor# (aigerSubstitution 'AIGER.xor#) #-}
+{-# ANN xor# (aigerSubstitution 'AIGER.xor) #-}
 {-# CLASH_OPAQUE xor# #-}
 {-# ANN xor# hasBlackBox #-}
 xor# :: KnownNat n => Unsigned n -> Unsigned n -> Unsigned n
 xor# (U v1) (U v2) = U (v1 `xor` v2)
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# ANN complement# (aigerSubstitution 'AIGER.complement#) #-}
+{-# ANN complement# (aigerSubstitution 'AIGER.complement) #-}
 {-# CLASH_OPAQUE complement# #-}
 {-# ANN complement# hasBlackBox #-}
 complement# :: forall n . KnownNat n => Unsigned n -> Unsigned n

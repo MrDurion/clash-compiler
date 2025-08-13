@@ -8,13 +8,13 @@ module Clash.Aiger.Util where
 
 import GHC.TypeLits (KnownNat, type (+), type (-), type (<=))
 
-import Clash.Annotations.Primitive (hasBlackBox)
-import Clash.Promoted.Nat (SNat (..), SNatLE (..), compareSNat)
-import {-# SOURCE #-} Clash.Sized.Internal.BitVector (Bit, BitVector)
-
 -- basic blackboxes imported
-import {-# SOURCE #-} qualified Clash.Sized.Internal.BitVector as BV (
-  Bit (..),
+
+import Clash.Class.BitPack.Internal (BitPack, BitSize, bitCoerce)
+import Clash.Promoted.Nat (SNat (..), SNatLE (..), compareSNat)
+import Clash.Sized.Internal.BitVector (Bit, BitVector)
+
+import qualified Clash.Sized.Internal.BitVector as BV (
   BitVector (..),
   high,
   low,
@@ -23,11 +23,6 @@ import {-# SOURCE #-} qualified Clash.Sized.Internal.BitVector as BV (
   unpack#,
   (++#),
  )
-
-{-# ANN undefined## hasBlackBox #-}
-{-# CLASH_OPAQUE undefined## #-}
-undefined## :: Bit
-undefined## = BV.Bit 1 0
 
 comp ::
   forall n m d.
@@ -139,3 +134,9 @@ foldlBV :: forall n b. (KnownNat n) => (Bit -> b -> b) -> b -> BitVector n -> b
 foldlBV f d bv = maybeLDestructBV go d bv
  where
   go bs b = f b (foldrBV f d bs)
+
+as ::
+  forall r n.
+  (BitPack r, BitPack n, BitSize n ~ BitSize r) =>
+  n -> r
+as = bitCoerce
