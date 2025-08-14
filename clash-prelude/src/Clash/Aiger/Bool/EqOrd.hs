@@ -1,7 +1,7 @@
 module Clash.Aiger.Bool.EqOrd where
 
+import Clash.Aiger.Base (as)
 import Clash.Aiger.Bit.EqOrd as Bit
-import Clash.Aiger.Util (as)
 import Clash.Sized.Internal.BitVector (Bit)
 
 toBit :: Bool -> Bit

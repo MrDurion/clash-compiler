@@ -1,9 +1,9 @@
 module Clash.Aiger.Bool.Bits where
 
+import Clash.Aiger.Base (as)
 import Clash.Sized.Internal.BitVector (Bit)
 
 import qualified Clash.Aiger.Bit.Bits as Bit
-import Clash.Aiger.Util (as)
 
 and, or, xor :: Bool -> Bool -> Bool
 complement :: Bool -> Bool
@@ -23,7 +23,6 @@ setBit
   , rotateL
   , rotateR ::
     Bool -> Int -> Bool
-
 toBit :: Bool -> Bit
 toBit b = as @Bit @Bool b
 

@@ -1,28 +1,21 @@
-- BlackBox:
-    name: Clash.Aiger.BitVector.undefined##
-    kind: Expression
-    type: "undefined## :: Bit"
-    template: "x"
-    workInfo: Constant
-- BlackBox:
-    name: Clash.Sized.Internal.BitVector.high
-    kind: Expression
-    type: "high :: Bit"
-    template: "1"
-    workInfo: Constant
-- BlackBox:
-    name: Clash.Sized.Internal.BitVector.low
-    kind: Expression
-    type: "low :: Bit"
-    template: "0"
-    workInfo: Constant
-- BlackBox:
-    name: Clash.Sized.Internal.BitVector.and##
-    kind: Expression
-    type: "and## :: Bit -> Bit -> Bit"
-    template: ~ARG[0] ~ARG[1]
-- BlackBox:
-    name: Clash.Sized.Internal.BitVector.complement##
-    kind: Expression
-    type: "complement## :: Bit -> Bit"
-    template: "! ~ARG[0]"
+- Primitive:
+    name: Clash.Aiger.Base.undefined##
+    primType: Function
+- Primitive:
+    name: Clash.Aiger.Base.high
+    primType: Function
+- Primitive:
+    name: Clash.Aiger.Base.low
+    primType: Function
+- Primitive:
+    name: Clash.Aiger.Base.and
+    primType: Function
+- Primitive:
+    name: Clash.Aiger.Base.complement
+    primType: Function
+- Primitive:
+    name: Clash.Aiger.Base.++#
+    primType: Function
+- Primitive:
+    name: Clash.Aiger.Base.split#
+    primType: Function

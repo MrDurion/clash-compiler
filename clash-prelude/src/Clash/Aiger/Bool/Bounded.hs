@@ -1,6 +1,6 @@
 module Clash.Aiger.Bool.Bounded where
 
-import Clash.Aiger.Util (as)
+import Clash.Aiger.Base (as)
 
 import qualified Clash.Aiger.Bit.Bounded as Bit
 

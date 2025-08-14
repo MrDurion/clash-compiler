@@ -5,9 +5,10 @@ module Clash.Aiger.BitVector.EqOrd where
 
 import GHC.TypeLits (KnownNat)
 
+import Clash.Aiger.Base (as)
 import Clash.Aiger.BitVector.Bits (reduceAnd)
-import Clash.Aiger.Util (maybeDestructBV2, zipWithBV, as)
-import  Clash.Sized.Internal.BitVector (Bit, BitVector)
+import Clash.Aiger.Util (maybeDestructBV2, zipWithBV)
+import Clash.Sized.Internal.BitVector (Bit, BitVector)
 
 import qualified Clash.Aiger.Base as Base
 import qualified Clash.Aiger.Bit.EqOrd as Bit

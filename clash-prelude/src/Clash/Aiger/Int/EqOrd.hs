@@ -1,6 +1,6 @@
 module Clash.Aiger.Int.EqOrd where
 
-import Clash.Aiger.Util (as)
+import Clash.Aiger.Base (as)
 import Clash.Sized.Internal.Signed (Signed)
 
 import qualified Clash.Aiger.Signed.EqOrd as S

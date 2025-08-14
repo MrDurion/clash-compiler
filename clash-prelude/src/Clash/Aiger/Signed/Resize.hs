@@ -4,22 +4,24 @@
 module Clash.Aiger.Signed.Resize where
 
 import GHC.TypeLits (KnownNat, type (+), type (-), type (<=))
+import Prelude hiding (truncate)
 
-import Clash.Aiger.Util (comp, as)
+import Clash.Aiger.Base (as)
+import Clash.Aiger.Util (comp)
 import Clash.Sized.Internal.BitVector (BitVector)
-import  Clash.Sized.Internal.Signed (Signed)
+import Clash.Sized.Internal.Signed (Signed)
 
 import qualified Clash.Aiger.BitVector.Resize as BV
 
 resize :: forall n m. (KnownNat n, KnownNat m) => Signed n -> Signed m
-resize (as @(BitVector n) -> bv)  = as @(Signed m) $ go bv
+resize (as @(BitVector n) -> bv) = as @(Signed m) $ go bv
  where
   go :: BitVector n -> BitVector m
-  go = comp @n @m trunc grow
+  go = comp @n @m truncate grow
 
-  trunc ::
+  truncate ::
     (m <= n) => BitVector (m + (n - m)) -> BitVector m
-  trunc = BV.truncateB
+  truncate = BV.truncateB
 
   grow :: (n <= m) => BitVector n -> BitVector m
-  grow = BV.growBV
+  grow = BV.signExtend

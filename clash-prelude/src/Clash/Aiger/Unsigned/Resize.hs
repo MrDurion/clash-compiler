@@ -5,14 +5,15 @@ module Clash.Aiger.Unsigned.Resize where
 
 import GHC.TypeLits (KnownNat, type (+), type (-), type (<=))
 
-import Clash.Aiger.Util (comp, as)
+import Clash.Aiger.Base (as)
+import Clash.Aiger.Util (comp)
 import Clash.Sized.Internal.BitVector (BitVector)
 import Clash.Sized.Internal.Unsigned (Unsigned)
 
 import qualified Clash.Aiger.BitVector.Resize as BV
 
 resize :: forall n m. (KnownNat n, KnownNat m) => Unsigned n -> Unsigned m
-resize (as @(BitVector n) -> bv)= as @(Unsigned m) $ go bv
+resize (as @(BitVector n) -> bv) = as @(Unsigned m) $ go bv
  where
   go :: BitVector n -> BitVector m
   go = comp @n @m trunc grow
@@ -22,4 +23,4 @@ resize (as @(BitVector n) -> bv)= as @(Unsigned m) $ go bv
   trunc = BV.truncateB
 
   grow :: (n <= m) => BitVector n -> BitVector m
-  grow = BV.growBV
+  grow = BV.zeroExtend

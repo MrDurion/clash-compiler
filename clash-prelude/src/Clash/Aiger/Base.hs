@@ -6,44 +6,46 @@ import GHC.TypeLits (KnownNat, type (+))
 import Prelude hiding (and, or)
 
 import Clash.Annotations.Primitive (hasBlackBox)
+import Clash.Class.BitPack (BitPack, BitSize)
 import Clash.Sized.Internal.BitVector (Bit, BitVector)
 
-import qualified Clash.Sized.Internal.BitVector as BB_B (
+import qualified Clash.Class.BitPack.Internal as BitPack (
+  bitCoerce,
+ )
+import qualified Clash.Sized.Internal.BitVector as BitVector (
   Bit (..),
   and##,
   complement##,
   high,
   low,
-  pack#,
   split#,
-  unpack#,
   (++#),
  )
 
 {-# ANN high hasBlackBox #-}
 {-# CLASH_OPAQUE high #-}
 high :: Bit
-high = BB_B.high
+high = BitVector.high
 
 {-# ANN low hasBlackBox #-}
 {-# CLASH_OPAQUE low #-}
 low :: Bit
-low = BB_B.low
+low = BitVector.low
 
 {-# ANN and hasBlackBox #-}
 {-# CLASH_OPAQUE and #-}
 and :: Bit -> Bit -> Bit
-and = BB_B.and##
+and = BitVector.and##
 
 {-# ANN complement hasBlackBox #-}
 {-# CLASH_OPAQUE complement #-}
 complement :: Bit -> Bit
-complement = BB_B.complement##
+complement = BitVector.complement##
 
 {-# ANN undefined## hasBlackBox #-}
 {-# CLASH_OPAQUE undefined## #-}
 undefined## :: Bit
-undefined## = BB_B.Bit 1 0
+undefined## = BitVector.Bit 1 0
 
 {-# ANN split# hasBlackBox #-}
 {-# CLASH_OPAQUE split# #-}
@@ -52,22 +54,30 @@ split# ::
   (KnownNat n) =>
   BitVector (m + n) ->
   (BitVector m, BitVector n)
-split# = BB_B.split#
+split# = BitVector.split#
 
 {-# ANN (++#) hasBlackBox #-}
 {-# CLASH_OPAQUE (++#) #-}
 (++#) :: (KnownNat m) => BitVector n -> BitVector m -> BitVector (n + m)
-(++#) = (BB_B.++#)
+(++#) = (BitVector.++#)
 
-{-# ANN pack# hasBlackBox #-}
-{-# CLASH_OPAQUE pack# #-}
-pack# :: Bit -> BitVector 1
-pack# = BB_B.pack#
+{-# ANN as hasBlackBox #-}
+{-# CLASH_OPAQUE as #-}
+as ::
+  forall r n.
+  (BitPack r, BitPack n, BitSize n ~ BitSize r) =>
+  n -> r
+as = BitPack.bitCoerce
 
-{-# ANN unpack# hasBlackBox #-}
-{-# CLASH_OPAQUE unpack# #-}
-unpack# :: BitVector 1 -> Bit
-unpack# = BB_B.unpack#
+-- {-# ANN pack# hasBlackBox #-}
+-- {-# CLASH_OPAQUE pack# #-}
+-- pack# :: Bit -> BitVector 1
+-- pack# = BitVector.pack#
+--
+-- {-# ANN unpack# hasBlackBox #-}
+-- {-# CLASH_OPAQUE unpack# #-}
+-- unpack# :: BitVector 1 -> Bit
+-- unpack# = BitVector.unpack#
 
 -- Basic logic gates from the primitives
 

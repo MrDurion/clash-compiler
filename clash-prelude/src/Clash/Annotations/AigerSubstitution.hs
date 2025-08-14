@@ -14,3 +14,13 @@ primitiveAigerSubstitution n = PrimitiveAigerSubstitution n
 
 aigerSubstitution :: Name -> AigerSubstitution
 aigerSubstitution n = AigerSubstitution n
+
+aigerModuleNames :: [String]
+aigerModuleNames =
+  [ "Clash.Aiger.Bit"
+  , "Clash.Aiger.BitVector"
+  , "Clash.Aiger.Bool"
+  , "Clash.Aiger.Unsigned"
+  , "Clash.Aiger.Signed"
+  , "Clash.Aiger.Int"
+  ]

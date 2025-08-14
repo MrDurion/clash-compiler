@@ -5,8 +5,8 @@ module Clash.Aiger.Bit.EqOrd where
 
 import Prelude hiding (and)
 
-import Clash.Aiger.Util (as)
-import  Clash.Sized.Internal.BitVector (Bit)
+import Clash.Aiger.Base (as)
+import Clash.Sized.Internal.BitVector (Bit)
 
 import qualified Clash.Aiger.Base as Base
 

@@ -522,13 +522,13 @@ parseDataConE h es = do
 parseBlackBoxE :: Text -> BlackBoxContext -> AigerM AigerExpr
 parseBlackBoxE n context =
   ( case (show n) of
-      "\"Clash.Aiger.BitVector.undefined##\"" -> do
+      "\"Clash.Aiger.Base.undefined##\"" -> do
         pure $ BitRange [undefinedBit]
-      "\"Clash.Sized.Internal.BitVector.high\"" -> do
+      "\"Clash.Aiger.Base.high\"" -> do
         pure $ BitRange [(AigerIndex 0 True)]
-      "\"Clash.Sized.Internal.BitVector.low\"" -> do
+      "\"Clash.Aiger.Base.low\"" -> do
         pure $ BitRange [(AigerIndex 0 False)]
-      "\"Clash.Sized.Internal.BitVector.and##\"" -> do
+      "\"Clash.Aiger.Base.and\"" -> do
         id0 <- getExpr 0
         id0E <- convertExprToAigerExpr id0
         id1 <- getExpr 1
@@ -536,33 +536,25 @@ parseBlackBoxE n context =
         index <- getNewIndex
         addUnsolvedAndNodes $ UnsolvedAndNode index id0E id1E
         pure $ And index
-      "\"Clash.Sized.Internal.BitVector.complement##\"" -> do
+      "\"Clash.Aiger.Base.complement\"" -> do
         id0 <- getExpr 0
         id0E <- convertExprToAigerExpr id0
         pure $ Complement id0E
-      "\"Clash.Sized.Internal.BitVector.++#\"" -> do
+      "\"Clash.Aiger.Base.++#\"" -> do
         id1 <- getExpr 1
         id1E <- convertExprToAigerExpr id1
         id2 <- getExpr 2
         id2E <- convertExprToAigerExpr id2
         pure $ Concat [id1E, id2E]
-      "\"Clash.Sized.Internal.BitVector.split#\"" -> do
+      "\"Clash.Aiger.Base.split#\"" -> do
         -- nat0 <- getNatLit 0
         id1 <- getExpr 1
         id1E <- convertExprToAigerExpr id1
         pure $ id1E
-      "\"Clash.Sized.Internal.BitVector.unpack#\"" -> do
+      "\"Clash.Aiger.Base.as\"" -> do
         id0 <- getExpr 0
         convertExprToAigerExpr id0
-      "\"Clash.Sized.Internal.BitVector.pack#\"" -> do
-        id0 <- getExpr 0
-        convertExprToAigerExpr id0
-      "\"Clash.Sized.Internal.Unsigned.unpack#\"" -> do
-        id0 <- getExpr 1
-        convertExprToAigerExpr id0
-      "\"Clash.Sized.Internal.Unsigned.pack#\"" -> do
-        id0 <- getExpr 0
-        convertExprToAigerExpr id0
+      -- TODO fix these blackboxes:
       "\"Clash.Sized.Internal.BitVector.toEnum##\"" -> do
         n1 <- getExpr 1
         n1E <- convertExprToAigerExpr n1

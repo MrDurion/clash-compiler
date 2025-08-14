@@ -6,6 +6,7 @@ module Clash.Aiger.BitVector.Bits where
 
 import GHC.TypeLits (KnownNat)
 
+import Clash.Aiger.Base (as, (++#))
 import Clash.Aiger.Util (
   all0BV,
   foldrBV,
@@ -14,7 +15,7 @@ import Clash.Aiger.Util (
   maybeLDestructBV,
   zipWithBV,
  )
-import  Clash.Sized.Internal.BitVector (Bit, BitVector)
+import Clash.Sized.Internal.BitVector (Bit, BitVector)
 
 import qualified Clash.Aiger.Base as Base
 import qualified Clash.Aiger.Bit.Bits as Bit
@@ -43,7 +44,6 @@ lsb bv = maybeLDestructBV go Base.low bv
  where
   go _ a = a
 
--- TODO Use Int.EqOrd here, only synthesizable code
 shiftlBV
   , shiftrBV
   , rotatelBV
@@ -51,17 +51,26 @@ shiftlBV
     forall n. (KnownNat n) => BitVector n -> BitVector n
 shiftlBV bv = maybeDestructBV go all0BV bv
  where
-  go _ bs = bs Base.++# Base.pack# Base.low
+  go _ bs = bs ++# low
+  low = as @(BitVector 1) Base.low
 shiftrBV bv = maybeLDestructBV go all0BV bv
  where
-  go bs _ = Base.pack# Base.low Base.++# bs
+  go bs _ = low ++# bs
+  low = as @(BitVector 1) Base.low
 rotatelBV bv = maybeDestructBV go all0BV bv
  where
-  go b bs = bs Base.++# Base.pack# b
+  go b bs = bs ++# as @(BitVector 1) b
 rotaterBV bv = maybeLDestructBV go all0BV bv
  where
-  go bs b = Base.pack# b Base.++# bs
+  go bs b = as @(BitVector 1) b ++# bs
 
+-- I use the Haskell native version of integer comparison here, since that does not
+-- make a cyclic dependency.
+--
+-- I want to use this system of going the haskell route for every occurance where a
+-- function of a datatype requires stuff of a datatype of a higher level
+--
+-- required higher functions: Int Num and EqOrd
 shiftL
   , shiftR
   , rotateL
@@ -70,6 +79,7 @@ shiftL
 shiftL bv i =
   if
     | i < 0 ->
+        -- TODO , only synthesizable code
         error $ "'shiftL' undefined for negative number: " ++ show i
     | i == 0 ->
         bv
@@ -78,6 +88,7 @@ shiftL bv i =
 shiftR bv i =
   if
     | i < 0 ->
+        -- TODO , only synthesizable code
         error $ "'shiftR' undefined for negative number: " ++ show i
     | i == 0 ->
         bv
@@ -86,6 +97,7 @@ shiftR bv i =
 rotateL bv i =
   if
     | i < 0 ->
+        -- TODO , only synthesizable code
         error $ "'rotateL' undefined for negative number: " ++ show i
     | i == 0 ->
         bv
@@ -94,6 +106,7 @@ rotateL bv i =
 rotateR bv i =
   if
     | i < 0 ->
+        -- TODO , only synthesizable code
         error $ "'rotateR' undefined for negative number: " ++ show i
     | i == 0 ->
         bv

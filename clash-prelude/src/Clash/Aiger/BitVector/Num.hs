@@ -6,6 +6,7 @@ module Clash.Aiger.BitVector.Num where
 import GHC.TypeLits (KnownNat)
 import Prelude hiding (negate, (*), (+), (-))
 
+import Clash.Aiger.Base (as)
 import Clash.Aiger.Util (
   all0BV,
   mapBV,
@@ -13,7 +14,7 @@ import Clash.Aiger.Util (
   maybeDestructBV2,
   maybeLDestructBV,
  )
-import  Clash.Sized.Internal.BitVector (Bit, BitVector)
+import Clash.Sized.Internal.BitVector (Bit, BitVector)
 
 import qualified Clash.Aiger.Base as Base
 import qualified Clash.Aiger.BitVector.Bits as BitVector
@@ -81,7 +82,7 @@ negateBV bv = maybeDestructBV go (all0BV, Base.high) bv
       (r, c) = negateBV bs
       (bitr, bitc) = halfAdder (Base.complement b) c
      in
-      ((Base.pack# bitr) Base.++# r, bitc)
+      ((as @(BitVector 1) bitr) Base.++# r, bitc)
 
 adder ::
   forall n. (KnownNat n) => BitVector n -> BitVector n -> (BitVector n, Bit)
@@ -92,7 +93,7 @@ adder bv1 bv2 = maybeDestructBV2 go (all0BV, Base.low) bv1 bv2
       (r, c) = adder bs1 bs2
       (bitr, bitc) = fullAdder b1 b2 c
      in
-      ((Base.pack# bitr) Base.++# r, bitc)
+      ((as @(BitVector 1) bitr) Base.++# r, bitc)
 
 fullAdder :: Bit -> Bit -> Bit -> (Bit, Bit)
 fullAdder a b c = (r2, c_out)

@@ -120,7 +120,8 @@ import           Clash.Util                          (curLoc)
 import qualified Clash.Util.Interpolate              as I
 import           Clash.GHC.Util
 --FIXME ordering and aligning
-import Clash.Annotations.AigerSubstitution (AigerSubstitution (..))
+import Clash.Annotations.AigerSubstitution (AigerSubstitution (..), aigerModuleNames)
+import Debug.Trace (traceM)
 
 -- | Data structure tracking loaded binders (and their related data)
 data LoadedBinders = LoadedBinders
@@ -290,7 +291,9 @@ loadIface foundMod = do
 loadExternalBinders :: GHC.GhcMonad m => HDL -> [CoreSyn.CoreBndr] -> m LoadedBinders
 loadExternalBinders hdl bndrs = 
   flip execStateT emptyLb $ do
-    loadPrimitiveAigerSubstitutionAnnotations 
+    case hdl of
+      AIGER -> mapM_ loadAigerSubstitutionFunctions aigerModuleNames
+      _ -> pure ()
     mapM_ (loadExprFromIface hdl) bndrs
 
 -- Given a list of binds, recursively load all its binders, primitives, and
@@ -298,7 +301,9 @@ loadExternalBinders hdl bndrs =
 loadExternalExprs :: GHC.GhcMonad m => HDL -> [CoreSyn.CoreBind] -> m LoadedBinders
 loadExternalExprs hdl binds0 =
   flip execStateT initLb $ do
-    loadPrimitiveAigerSubstitutionAnnotations 
+    case hdl of
+      AIGER -> mapM_ loadAigerSubstitutionFunctions aigerModuleNames
+      _ -> pure ()
     mapM_ (\(b, e) -> addBndrM hdl b (Just e)) binds1
  where
   -- 'lbBinders' is preinitialized with all binders in given binds, as the given
@@ -396,12 +401,14 @@ loadAigerSubstitutionAnnotations anns = do
     GhcPlugins.fromSerialized
       (GhcPlugins.deserializeWithData :: [Word8] -> AigerSubstitution)
 
-loadPrimitiveAigerSubstitutionAnnotations ::
+loadAigerSubstitutionFunctions ::
   GHC.GhcMonad m =>
+  String ->
   LoadedBinderT m ()
-loadPrimitiveAigerSubstitutionAnnotations = do
-  let mname = Module.mkModuleName "Clash.Aiger.Prim"
-  nameMod <- lift $ GHC.findModule mname Nothing 
+loadAigerSubstitutionFunctions aigerModuleName = do
+  let mname = Module.mkModuleName aigerModuleName
+  nameMod <- lift $  GHC.findModule mname Nothing 
+  traceM $ show $ showPprUnsafe nameMod
 #if MIN_VERSION_ghc(9,4,0)
   env <- lift GHC.getSession
   ifaceM <- lift (liftIO (loadIface env nameMod))

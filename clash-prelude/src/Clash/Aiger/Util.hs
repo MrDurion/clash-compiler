@@ -10,19 +10,11 @@ import GHC.TypeLits (KnownNat, type (+), type (-), type (<=))
 
 -- basic blackboxes imported
 
-import Clash.Class.BitPack.Internal (BitPack, BitSize, bitCoerce)
+import Clash.Aiger.Base (as)
 import Clash.Promoted.Nat (SNat (..), SNatLE (..), compareSNat)
 import Clash.Sized.Internal.BitVector (Bit, BitVector)
 
-import qualified Clash.Sized.Internal.BitVector as BV (
-  BitVector (..),
-  high,
-  low,
-  pack#,
-  split#,
-  unpack#,
-  (++#),
- )
+import qualified Clash.Aiger.Base as Base
 
 comp ::
   forall n m d.
@@ -46,15 +38,15 @@ destructBV ::
   forall n. (KnownNat n, 1 <= n) => BitVector n -> (Bit, BitVector (n - 1))
 destructBV bv = (bit, bs)
  where
-  (b :: BitVector 1, bs :: BitVector (n - 1)) = BV.split# bv
-  bit = BV.unpack# b
+  (b :: BitVector 1, bs :: BitVector (n - 1)) = Base.split# bv
+  bit = as @Bit b
 
 rdestructBV ::
   forall n. (KnownNat n, 1 <= n) => BitVector n -> (BitVector (n - 1), Bit)
 rdestructBV bv = (bs, bit)
  where
-  (bs :: BitVector (n - 1), b :: BitVector 1) = BV.split# bv
-  bit = BV.unpack# b
+  (bs :: BitVector (n - 1), b :: BitVector 1) = Base.split# bv
+  bit = as @Bit b
 
 maybeDestructBV ::
   forall n d.
@@ -107,23 +99,23 @@ maybeDestructBV2 f d bv1 bv2 = maybeBV @n f' d
 mapBV :: forall n. (KnownNat n) => (Bit -> Bit) -> BitVector n -> BitVector n
 mapBV f bv = maybeDestructBV go bv bv
  where
-  go b bs = BV.pack# (f b) BV.++# mapBV f bs
+  go b bs = as @(BitVector 1) (f b) Base.++# mapBV f bs
 
 repeatBV :: forall n. (KnownNat n) => Bit -> BitVector n
-repeatBV f = mapBV (\_ -> f) (BV.BV 0 0)
+repeatBV f = mapBV (\_ -> f) 0
 
 all0BV :: forall n. (KnownNat n) => BitVector n
-all0BV = repeatBV BV.low
+all0BV = repeatBV Base.low
 
 all1BV :: (KnownNat n) => BitVector n
-all1BV = repeatBV BV.high
+all1BV = repeatBV Base.high
 
 zipWithBV ::
   forall n.
   (KnownNat n) => (Bit -> Bit -> Bit) -> BitVector n -> BitVector n -> BitVector n
 zipWithBV f bv1 bv2 = maybeDestructBV2 go all0BV bv1 bv2
  where
-  go b1 b2 bs1 bs2 = BV.pack# (f b1 b2) BV.++# zipWithBV f bs1 bs2
+  go b1 b2 bs1 bs2 = as @(BitVector 1) (f b1 b2) Base.++# zipWithBV f bs1 bs2
 
 foldrBV :: forall n b. (KnownNat n) => (Bit -> b -> b) -> b -> BitVector n -> b
 foldrBV f d bv = maybeDestructBV go d bv
@@ -135,8 +127,7 @@ foldlBV f d bv = maybeLDestructBV go d bv
  where
   go bs b = f b (foldrBV f d bs)
 
-as ::
-  forall r n.
-  (BitPack r, BitPack n, BitSize n ~ BitSize r) =>
-  n -> r
-as = bitCoerce
+flipFirstBit :: (KnownNat n) => BitVector n -> BitVector n
+flipFirstBit bv = maybeDestructBV des bv bv
+ where
+  des b bs = (as @(BitVector 1) (Base.complement b)) Base.++# bs

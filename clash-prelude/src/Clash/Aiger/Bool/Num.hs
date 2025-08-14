@@ -1,9 +1,9 @@
 module Clash.Aiger.Bool.Num where
 
+import Clash.Aiger.Base (as)
 import Clash.Sized.Internal.BitVector (Bit)
 
 import qualified Clash.Aiger.Bit.Num as Bit
-import Clash.Aiger.Util (as)
 
 toBit :: Bool -> Bit
 toBit b = as @Bit @Bool b

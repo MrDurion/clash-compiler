@@ -2,7 +2,7 @@ module Clash.Aiger.Unsigned.Bits where
 
 import GHC.TypeLits (KnownNat)
 
-import Clash.Aiger.Util (as)
+import Clash.Aiger.Base (as)
 import Clash.Sized.Internal.BitVector (BitVector)
 import Clash.Sized.Internal.Unsigned (Unsigned)
 

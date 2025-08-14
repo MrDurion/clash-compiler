@@ -222,9 +222,6 @@ import           Clash.Signal.Delayed
 import           Clash.Signal.Trace
 import           Clash.XException
 
-import Clash.Annotations.AigerSubstitution (primitiveAigerSubstitution)
-{-# ANN module (primitiveAigerSubstitution "Clash.Aiger.Prim") #-}
-
 {- $setup
 >>> :set -XDataKinds -XFlexibleContexts -XTypeApplications
 >>> let window4  = window  :: HiddenClockResetEnable dom  => Signal dom Int -> Vec 4 (Signal dom Int)
