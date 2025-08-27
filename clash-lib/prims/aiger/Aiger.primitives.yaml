@@ -1,21 +1,36 @@
 - Primitive:
     name: Clash.Aiger.Base.undefined##
     primType: Function
+    workInfo: Constant
 - Primitive:
     name: Clash.Aiger.Base.high
     primType: Function
+    workInfo: Constant
 - Primitive:
     name: Clash.Aiger.Base.low
     primType: Function
-- Primitive:
+    workInfo: Constant
+- BlackBox:
     name: Clash.Aiger.Base.and
-    primType: Function
-- Primitive:
+    kind: Expression
+    template: ~ARG[0] ~ARG[1]
+    workInfo: Never
+- BlackBox:
     name: Clash.Aiger.Base.complement
-    primType: Function
-- Primitive:
+    kind: Expression
+    template: ~ARG[0]
+    workInfo: Never
+- BlackBox:
     name: Clash.Aiger.Base.++#
-    primType: Function
-- Primitive:
+    kind: Expression
+    template: "~ARG[1] ++ ~ARG[2] ~LIT[0]"
+    workInfo: Never
+- BlackBox:
     name: Clash.Aiger.Base.split#
-    primType: Function
+    kind: Expression
+    template: ~ARG[1] ~LIT[0]
+    workInfo: Never
+- BlackBox:
+    name: Clash.Aiger.Base.as
+    kind: Expression
+    template: ~ARG[3]

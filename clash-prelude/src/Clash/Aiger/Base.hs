@@ -68,20 +68,3 @@ as ::
   (BitPack r, BitPack n, BitSize n ~ BitSize r) =>
   n -> r
 as = BitPack.bitCoerce
-
--- {-# ANN pack# hasBlackBox #-}
--- {-# CLASH_OPAQUE pack# #-}
--- pack# :: Bit -> BitVector 1
--- pack# = BitVector.pack#
---
--- {-# ANN unpack# hasBlackBox #-}
--- {-# CLASH_OPAQUE unpack# #-}
--- unpack# :: BitVector 1 -> Bit
--- unpack# = BitVector.unpack#
-
--- Basic logic gates from the primitives
-
-or :: Bit -> Bit -> Bit
-or b1 b2 = complement $ (complement b1) `and` (complement b2)
-xor :: Bit -> Bit -> Bit
-xor b1 b2 = complement $ (b1 `and` b2) `or` (complement b1 `and` complement b2)

@@ -437,6 +437,7 @@ and##, or##, xor## :: Bit -> Bit -> Bit
 and## (Bit m1 v1) (Bit m2 v2) = Bit mask (v1 .&. v2 .&. complement mask)
   where mask = (m1.&.v2 .|. m1.&.m2 .|. m2.&.v1)
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN and## (aigerSubstitution 'AIGER_BIT.and) #-}
 {-# CLASH_OPAQUE and## #-}
 {-# ANN and## hasBlackBox #-}
 
@@ -458,6 +459,7 @@ complement## :: Bit -> Bit
 complement## (Bit m v) = Bit m (complementB v .&. complementB m)
   where complementB (W# b#) = W# (int2Word# (eqWord# b# 0##))
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN complement## (aigerSubstitution 'AIGER_BIT.complement) #-}
 {-# CLASH_OPAQUE complement## #-}
 {-# ANN complement## hasBlackBox #-}
 

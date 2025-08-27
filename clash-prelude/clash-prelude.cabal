@@ -182,40 +182,11 @@ Library
                       Clash.Aiger.Util
                       Clash.Aiger.Prim
                       Clash.Aiger.Bit
-                      Clash.Aiger.Bit.EqOrd
-                      Clash.Aiger.Bit.Bits
-                      Clash.Aiger.Bit.Num
-                      Clash.Aiger.Bit.Bounded
                       Clash.Aiger.BitVector
-                      Clash.Aiger.BitVector.EqOrd
-                      Clash.Aiger.BitVector.Bits
-                      Clash.Aiger.BitVector.Num
-                      Clash.Aiger.BitVector.Bounded
-                      Clash.Aiger.BitVector.Resize
-                      Clash.Aiger.BitVector.Undefined
                       Clash.Aiger.Unsigned
-                      Clash.Aiger.Unsigned.EqOrd
-                      Clash.Aiger.Unsigned.Bits
-                      Clash.Aiger.Unsigned.Num
-                      Clash.Aiger.Unsigned.Bounded
-                      Clash.Aiger.Unsigned.Resize
                       Clash.Aiger.Signed
-                      Clash.Aiger.Signed.EqOrd
-                      Clash.Aiger.Signed.Bits
-                      Clash.Aiger.Signed.Num
-                      Clash.Aiger.Signed.Bounded
-                      Clash.Aiger.Signed.Resize
                       Clash.Aiger.Bool
-                      Clash.Aiger.Bool.EqOrd
-                      Clash.Aiger.Bool.Bits
-                      Clash.Aiger.Bool.Num
-                      Clash.Aiger.Bool.Bounded
                       Clash.Aiger.Int
-                      Clash.Aiger.Int.EqOrd
-                      Clash.Aiger.Int.Bits
-                      Clash.Aiger.Int.Num
-                      Clash.Aiger.Int.Bounded
-                      Clash.Aiger.Int.Resize
 
                       Clash.Annotations.TopEntity
                       Clash.Annotations.Primitive

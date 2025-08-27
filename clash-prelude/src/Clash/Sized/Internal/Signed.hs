@@ -235,6 +235,7 @@ instance KnownNat n => BitPack (Signed n) where
   unpack = unpack#
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN pack# (aigerSubstitution 'AIGER.pack) #-}
 {-# CLASH_OPAQUE pack# #-}
 {-# ANN pack# hasBlackBox #-}
 pack# :: forall n . KnownNat n => Signed n -> BitVector n
@@ -242,6 +243,7 @@ pack# (S i) = let m = 1 `shiftL0` fromInteger (natVal (Proxy @n))
               in  if i < 0 then BV 0 (naturalFromInteger (m + i)) else BV 0 (naturalFromInteger i)
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN unpack# (aigerSubstitution 'AIGER.unpack) #-}
 {-# CLASH_OPAQUE unpack# #-}
 {-# ANN unpack# hasBlackBox #-}
 unpack# :: forall n . KnownNat n => BitVector n -> Signed n

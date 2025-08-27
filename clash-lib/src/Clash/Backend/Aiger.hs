@@ -12,7 +12,7 @@ import Data.HashSet (HashSet)
 import Data.List ((!?))
 import Data.Monoid (Ap (..))
 import Data.Text (Text)
-import Debug.Trace (traceM)
+import Debug.Trace (trace, traceM)
 import GHC.Data.Maybe (orElse)
 import GHC.Num (integerToInt)
 import Prelude hiding (lookup)
@@ -521,72 +521,76 @@ parseDataConE h es = do
 
 parseBlackBoxE :: Text -> BlackBoxContext -> AigerM AigerExpr
 parseBlackBoxE n context =
-  ( case (show n) of
-      "\"Clash.Aiger.Base.undefined##\"" -> do
-        pure $ BitRange [undefinedBit]
-      "\"Clash.Aiger.Base.high\"" -> do
-        pure $ BitRange [(AigerIndex 0 True)]
-      "\"Clash.Aiger.Base.low\"" -> do
-        pure $ BitRange [(AigerIndex 0 False)]
-      "\"Clash.Aiger.Base.and\"" -> do
-        id0 <- getExpr 0
-        id0E <- convertExprToAigerExpr id0
-        id1 <- getExpr 1
-        id1E <- convertExprToAigerExpr id1
-        index <- getNewIndex
-        addUnsolvedAndNodes $ UnsolvedAndNode index id0E id1E
-        pure $ And index
-      "\"Clash.Aiger.Base.complement\"" -> do
-        id0 <- getExpr 0
-        id0E <- convertExprToAigerExpr id0
-        pure $ Complement id0E
-      "\"Clash.Aiger.Base.++#\"" -> do
-        id1 <- getExpr 1
-        id1E <- convertExprToAigerExpr id1
-        id2 <- getExpr 2
-        id2E <- convertExprToAigerExpr id2
-        pure $ Concat [id1E, id2E]
-      "\"Clash.Aiger.Base.split#\"" -> do
-        -- nat0 <- getNatLit 0
-        id1 <- getExpr 1
-        id1E <- convertExprToAigerExpr id1
-        pure $ id1E
-      "\"Clash.Aiger.Base.as\"" -> do
-        id0 <- getExpr 0
-        convertExprToAigerExpr id0
-      -- TODO fix these blackboxes:
-      "\"Clash.Sized.Internal.BitVector.toEnum##\"" -> do
-        n1 <- getExpr 1
-        n1E <- convertExprToAigerExpr n1
-        pure $ LastRange 0 1 n1E
-      "\"Clash.Sized.Internal.BitVector.fromInteger##\"" -> do
-        n1 <- getExpr 1
-        n1E <- convertExprToAigerExpr n1
-        pure $ LastRange 0 1 n1E
-      "\"Clash.Sized.Internal.BitVector.toEnum#\"" -> do
-        sz <- getNatLit 0
-        n1 <- getExpr 1
-        n1E <- convertExprToAigerExpr n1
-        pure $ LastRange 0 sz n1E
-      "\"Clash.Sized.Internal.BitVector.fromInteger#\"" -> do
-        sz <- getNatLit 0
-        n1 <- getExpr 2
-        n1E <- convertExprToAigerExpr n1
-        pure $ LastRange 0 sz n1E
-      "\"Clash.Sized.Internal.Unsigned.fromInteger#\"" -> do
-        sz <- getNatLit 0
-        n1 <- getExpr 1
-        n1E <- convertExprToAigerExpr n1
-        pure $ LastRange 0 sz n1E
-      _ ->
-        error
-          ("could not parse blackbox " ++ show n ++ "\n with context: " ++ show context)
-  )
+  let a = show (bbName context)
+   in ( trace a $ case a of
+          "\"Clash.Aiger.Base.undefined##\"" -> do
+            pure $ BitRange [undefinedBit]
+          "\"Clash.Aiger.Base.high\"" -> do
+            pure $ BitRange [(AigerIndex 0 True)]
+          "\"Clash.Aiger.Base.low\"" -> do
+            pure $ BitRange [(AigerIndex 0 False)]
+          "\"Clash.Aiger.Base.and\"" -> do
+            id0 <- getExpr 0
+            id0E <- convertExprToAigerExpr id0
+            id1 <- getExpr 1
+            id1E <- convertExprToAigerExpr id1
+            index <- getNewIndex
+            addUnsolvedAndNodes $ UnsolvedAndNode index id0E id1E
+            pure $ And index
+          "\"Clash.Aiger.Base.complement\"" -> do
+            id0 <- getExpr 0
+            id0E <- convertExprToAigerExpr id0
+            pure $ Complement id0E
+          "\"Clash.Aiger.Base.++#\"" -> do
+            id1 <- getExpr 1
+            id1E <- convertExprToAigerExpr id1
+            id2 <- getExpr 2
+            id2E <- convertExprToAigerExpr id2
+            pure $ Concat [id1E, id2E]
+          "\"Clash.Aiger.Base.split#\"" -> do
+            -- nat0 <- getNatLit 0
+            id1 <- getExpr 1
+            id1E <- convertExprToAigerExpr id1
+            pure $ id1E
+          "\"Clash.Aiger.Base.as\"" -> do
+            id0 <- getExpr 3
+            convertExprToAigerExpr id0
+          -- TODO fix these blackboxes:
+          "\"Clash.Sized.Internal.BitVector.toEnum##\"" -> do
+            n1 <- getExpr 1
+            n1E <- convertExprToAigerExpr n1
+            pure $ LastRange 0 1 n1E
+          "\"Clash.Sized.Internal.BitVector.fromInteger##\"" -> do
+            n1 <- getExpr 1
+            n1E <- convertExprToAigerExpr n1
+            pure $ LastRange 0 1 n1E
+          "\"Clash.Sized.Internal.BitVector.toEnum#\"" -> do
+            sz <- getNatLit 0
+            n1 <- getExpr 1
+            n1E <- convertExprToAigerExpr n1
+            pure $ LastRange 0 sz n1E
+          "\"Clash.Sized.Internal.BitVector.fromInteger#\"" -> do
+            sz <- getNatLit 0
+            n1 <- getExpr 2
+            n1E <- convertExprToAigerExpr n1
+            pure $ LastRange 0 sz n1E
+          "\"Clash.Sized.Internal.Unsigned.fromInteger#\"" -> do
+            sz <- getNatLit 0
+            n1 <- getExpr 1
+            n1E <- convertExprToAigerExpr n1
+            pure $ LastRange 0 sz n1E
+          _ ->
+            error
+              ("could not parse blackbox " ++ a ++ "\n with context: " ++ show context)
+      )
  where
   getExpr :: Int -> AigerM Expr
   getExpr i = do
     inp <- pure $ bbInputs context
-    pure $ (^. _1) (inp !! i)
+    let a = inp !? i
+    pure $
+      (^. _1)
+        (a `orElse` (error $ "could not find index " ++ show i ++ " in " ++ show context))
 
   getNatLit :: Int -> AigerM Int
   getNatLit i = do
