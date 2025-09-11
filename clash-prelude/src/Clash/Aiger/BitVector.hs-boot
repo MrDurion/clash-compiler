@@ -1,6 +1,6 @@
 module Clash.Aiger.BitVector where
 
-import GHC.TypeLits (KnownNat, type (+))
+import GHC.TypeLits (KnownNat, type (+), type (<=))
 import Prelude hiding (and, maxBound, minBound, negate, or, (*), (+), (-))
 
 import {-# SOURCE #-} Clash.Sized.Internal.BitVector (Bit, BitVector)
@@ -17,9 +17,7 @@ minBound, maxBound :: (KnownNat n) => BitVector n
   , (-)
   , (*) ::
     (KnownNat n) => BitVector n -> BitVector n -> BitVector n
-negate :: (KnownNat n) => BitVector n -> BitVector n
--- fromInteger :: (KnownNat n) => Integer -> Integer -> BitVector n
--- Bits
+negate, abs, signum :: forall n. (KnownNat n) => BitVector n -> BitVector n
 and
   , or
   , xor ::
@@ -27,10 +25,22 @@ and
 complement :: (KnownNat n) => BitVector n -> BitVector n
 reduceAnd, reduceOr, reduceXor :: (KnownNat n) => BitVector n -> Bit
 msb, lsb :: (KnownNat n) => BitVector n -> Bit
-shiftL
+undefined# :: (KnownNat n) => BitVector n
+
+zeroBits :: forall n. (KnownNat n) => BitVector n
+bit :: forall n. (KnownNat n) => Int -> BitVector n
+testBit :: forall n. (KnownNat n) => BitVector n -> Int -> Bool
+bitSizeMaybe :: forall n. (KnownNat n) => BitVector n -> Maybe Int
+bitSize, popCount :: forall n. (KnownNat n) => BitVector n -> Int
+isSigned :: (KnownNat n) => BitVector n -> Bool
+setBit
+  , clearBit
+  , complementBit
+  , shiftL
   , shiftR
   , rotateL
   , rotateR ::
-    forall n. (KnownNat n) => BitVector n -> Int -> BitVector n
+    (KnownNat n) => BitVector n -> Int -> BitVector n
 truncateB :: forall a b. (KnownNat a) => BitVector (a + b) -> BitVector a
-undefined# :: (KnownNat n) => BitVector n
+zeroExtend, signExtend :: (KnownNat a, KnownNat b) => BitVector a -> BitVector (b + a)
+resize :: forall n m. (KnownNat n, KnownNat m) => BitVector n -> BitVector m

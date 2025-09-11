@@ -3,7 +3,7 @@ module Clash.Aiger.Bit where
 import Prelude hiding (and, or)
 
 import Clash.Aiger.Base (as)
-import Clash.Sized.Internal.BitVector (Bit)
+import Clash.Sized.Internal.BitVector (Bit, BitVector)
 
 import qualified Clash.Aiger.Base as Base
 import {-# SOURCE #-} qualified Clash.Aiger.Int as INT
@@ -34,7 +34,7 @@ setBit
 (+) = xor
 (-) = xor
 (*) = and
-negate = complement
+negate = id
 abs = id
 signum = id
 
@@ -43,6 +43,13 @@ signum = id
 --  where
 --   w2  = as @(BitVector 64) $ W# w1
 --   i2 = as @(BitVector 64) $ i1
+
+--BitPack
+pack :: Bit -> BitVector 1
+pack = as @(BitVector 1)
+
+unpack :: BitVector 1 -> Bit
+unpack = as @Bit
 
 -- Eq and Ord
 neq b1 b2 = as @Bool $ neq# b1 b2

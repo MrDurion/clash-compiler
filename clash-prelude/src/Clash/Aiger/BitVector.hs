@@ -53,29 +53,26 @@ setBit
 undefined# :: (KnownNat n) => BitVector n
 -- Resize
 truncateB :: forall a b. (KnownNat a) => BitVector (a + b) -> BitVector a
-zeroExtend ::
-  forall m n. (KnownNat n, KnownNat m, m <= n) => BitVector m -> BitVector n
-signExtend ::
-  forall m n. (KnownNat n, KnownNat m, m <= n) => BitVector m -> BitVector n
+zeroExtend, signExtend :: (KnownNat a, KnownNat b) => BitVector a -> BitVector (b + a)
 resize :: forall n m. (KnownNat n, KnownNat m) => BitVector n -> BitVector m
 
+-- Implementations
+-- Undefined
 undefined# = repeatBV (Base.undefined##)
 
 -- Resize
 truncateB bv = b
  where
   (_, b) = Base.split# bv
-zeroExtend bv = (all0BV :: BitVector (n - m)) Base.++# bv
-signExtend bv = (repeatBV (msb bv) :: BitVector (n - m)) ++# bv
+zeroExtend bv = (all0BV) Base.++# bv
+signExtend bv = (repeatBV (msb bv)) ++# bv
 resize b1 = comp @n @m truncate grow b1
  where
-  truncate ::
-    (m <= n) => BitVector (m + (n - m)) -> BitVector m
-  truncate = truncateB
+  truncate = truncateB @m @(n - m)
   grow :: (n <= m) => BitVector n -> BitVector m
-  grow = zeroExtend
+  grow = zeroExtend @n @(m - n)
 
--- Num BitVector
+-- Num 
 (+) a b = fst $ adder a b
 (-) a b = a + (negate b)
 (*) a b = shiftAdd b

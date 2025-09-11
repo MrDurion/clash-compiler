@@ -1,11 +1,12 @@
 module Clash.Aiger.Bit where
 
-import GHC.Base (Word#)
 import Prelude hiding (and, or)
 
-import {-# SOURCE #-} Clash.Sized.Internal.BitVector (Bit)
+import {-# SOURCE #-} Clash.Sized.Internal.BitVector (Bit, BitVector)
 
 -- fromInteger :: Word# -> Integer -> Bit
+pack :: Bit -> BitVector 1
+unpack :: BitVector 1 -> Bit
 (+), (-), (*) :: Bit -> Bit -> Bit
 negate, abs, signum :: Bit -> Bit
 neq, eq, lt, le, gt, ge :: Bit -> Bit -> Bool

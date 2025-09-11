@@ -4,7 +4,7 @@
 module Clash.Aiger.Unsigned
 where
 
-import GHC.TypeLits (KnownNat, type (+), type (<=))
+import GHC.TypeLits (KnownNat, type (+), type (<=), type (-))
 import Prelude hiding (and, negate, or, (*), (+), (-))
 
 import Clash.Aiger.Base (as)
@@ -62,8 +62,8 @@ pack = as @(BitVector n) @(Unsigned n)
 -- Resize
 resize (as @(BitVector n) -> bv) = as @(Unsigned m) $ BV.resize bv
 truncateB (as @(BitVector (a + b)) -> bv) = as @(Unsigned a) $ BV.truncateB bv
-signExtend (as @(BitVector m) -> bv) = as @(Unsigned n) $ BV.signExtend bv
-zeroExtend (as @(BitVector m) -> bv) = as @(Unsigned n) $ BV.zeroExtend bv
+signExtend (as @(BitVector m) -> bv) = as @(Unsigned n) $ BV.signExtend @m @(n - m) bv
+zeroExtend (as @(BitVector m) -> bv) = as @(Unsigned n) $ BV.zeroExtend @m @(n - m) bv
 
 -- Undefined
 undefined# = as @(Unsigned n) BV.undefined#

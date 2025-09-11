@@ -65,7 +65,7 @@ resize (as @(BitVector n) -> bv) = as @(Signed m) $ go bv
     (m <= n) => BitVector (m + (n - m)) -> BitVector m
   truncate = BV.truncateB
   grow :: (n <= m) => BitVector n -> BitVector m
-  grow = BV.signExtend
+  grow = BV.signExtend @n @(m - n)
 
 -- Num
 (+) (as @(BitVector n) -> bv1) (as @(BitVector n) -> bv2) = as $ bv1 BV.+ bv2

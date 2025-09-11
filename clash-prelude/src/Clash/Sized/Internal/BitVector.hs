@@ -373,20 +373,43 @@ toEnum## = fromInteger## 0## . toInteger
 {-# ANN toEnum## hasBlackBox #-}
 
 instance Bounded Bit where
-  minBound = low
-  maxBound = high
+  minBound = minBound##
+  maxBound = maxBound## 
+
+{-# ANN minBound## (aigerSubstitution 'AIGER_BIT.minBound) #-}
+minBound## :: Bit
+minBound## = low
+
+{-# ANN maxBound## (aigerSubstitution 'AIGER_BIT.maxBound) #-}
+maxBound## :: Bit
+maxBound## = high
 
 instance Default Bit where
   def = low
 
 instance Num Bit where
-  (+)         = xor##
-  (-)         = xor##
-  (*)         = and##
-  negate      = complement##
-  abs         = id
-  signum b    = b
+  (+)         = (+##)
+  (-)         = (-##)
+  (*)         = (*##)
+  negate      = negate##
+  abs         = abs##
+  signum      = signum##
   fromInteger = fromInteger## 0##
+
+(+##), (-##), (*##) :: Bit -> Bit -> Bit
+negate##, abs##, signum## :: Bit -> Bit
+{-# ANN (+##) (aigerSubstitution '(AIGER_BIT.+)) #-}
+(+##) = xor##
+{-# ANN (-##) (aigerSubstitution '(AIGER_BIT.-)) #-}
+(-##) = xor##
+{-# ANN (*##) (aigerSubstitution '(AIGER_BIT.*)) #-}
+(*##) = and##
+{-# ANN negate## (aigerSubstitution 'AIGER_BIT.negate) #-}
+negate## = id
+{-# ANN abs## (aigerSubstitution 'AIGER_BIT.abs) #-}
+abs## = id
+{-# ANN signum## (aigerSubstitution 'AIGER_BIT.signum) #-}
+signum## b = b
 
 fromInteger## :: Word# -> Integer -> Bit
 fromInteger## m# i = Bit ((W# m#) `mod` 2) (fromInteger i `mod` 2)
@@ -411,22 +434,22 @@ instance Bits Bit where
   (.|.)             = or##
   xor               = xor##
   complement        = complement##
-  zeroBits          = low
-  bit i             = if i == 0 then high else low
-  setBit b i        = if i == 0 then high else b
-  clearBit b i      = if i == 0 then low  else b
-  complementBit b i = if i == 0 then complement## b else b
-  testBit b i       = if i == 0 then eq## b high else False
-  bitSizeMaybe _    = Just 1
-  bitSize _         = 1
-  isSigned _        = False
-  shift b i         = if i == 0 then b else low
-  shiftL b i        = if i == 0 then b else low
-  shiftR b i        = if i == 0 then b else low
-  rotate b _        = b
-  rotateL b _       = b
-  rotateR b _       = b
-  popCount b        = if eq## b low then 0 else 1
+  zeroBits          = zeroBits##
+  bit               = bit##
+  setBit            = setBit##
+  clearBit          = clearBit##
+  complementBit     = complementBit##
+  testBit           = testBit##
+  bitSizeMaybe      = bitSizeMaybe##
+  bitSize           = bitSize##
+  isSigned          = isSigned##
+  shift             = shift##
+  shiftL            = shiftL##
+  shiftR            = shiftR##
+  rotate            = rotate##
+  rotateL           = rotateL##
+  rotateR           = rotateR## 
+  popCount          = popCount## 
 
 instance FiniteBits Bit where
   finiteBitSize _      = 1
@@ -463,6 +486,71 @@ complement## (Bit m v) = Bit m (complementB v .&. complementB m)
 {-# CLASH_OPAQUE complement## #-}
 {-# ANN complement## hasBlackBox #-}
 
+
+zeroBits## :: Bit
+zeroBits## = low
+{-# ANN zeroBits## (aigerSubstitution 'AIGER_BIT.zeroBits) #-}
+
+bit## :: (Eq a, Num a) => a -> Bit
+bit## i = if i == 0 then high else low
+{-# ANN bit## (aigerSubstitution 'AIGER_BIT.bit) #-}
+
+setBit## :: Bit -> Int -> Bit
+setBit## b i = if i == 0 then high else b
+{-# ANN setBit## (aigerSubstitution 'AIGER_BIT.setBit) #-}
+
+clearBit## :: Bit -> Int -> Bit
+clearBit## b i = if i == 0 then low  else b
+{-# ANN clearBit## (aigerSubstitution 'AIGER_BIT.clearBit) #-}
+
+complementBit## :: Bit -> Int -> Bit
+complementBit## b i = if i == 0 then complement## b else b
+{-# ANN complementBit## (aigerSubstitution 'AIGER_BIT.complementBit) #-}
+
+testBit## :: Bit -> Int -> Bool
+testBit## b i = if i == 0 then eq## b high else False
+{-# ANN testBit## (aigerSubstitution 'AIGER_BIT.testBit) #-}
+
+bitSizeMaybe## :: Bit -> Maybe Int
+bitSizeMaybe## _ = Just 1
+{-# ANN bitSizeMaybe## (aigerSubstitution 'AIGER_BIT.bitSizeMaybe) #-}
+
+bitSize## :: Bit -> Int
+bitSize## _ = 1
+{-# ANN bitSize## (aigerSubstitution 'AIGER_BIT.bitSize) #-}
+
+isSigned## :: Bit -> Bool
+isSigned## _ = False
+{-# ANN isSigned## (aigerSubstitution 'AIGER_BIT.isSigned) #-}
+
+shift## :: Bit -> Int -> Bit
+shift## b i = if i == 0 then b else low
+{-# ANN shift## (aigerSubstitution 'AIGER_BIT.shift) #-}
+
+shiftL## :: Bit -> Int -> Bit
+shiftL## b i = if i == 0 then b else low
+{-# ANN shiftL## (aigerSubstitution 'AIGER_BIT.shiftL) #-}
+
+shiftR## :: Bit -> Int -> Bit
+shiftR## b i = if i == 0 then b else low
+{-# ANN shiftR## (aigerSubstitution 'AIGER_BIT.shiftR) #-}
+
+rotate## :: Bit -> Int -> Bit
+rotate## b _ = b
+{-# ANN rotate## (aigerSubstitution 'AIGER_BIT.rotate) #-}
+
+rotateL## :: Bit -> Int -> Bit
+rotateL## b _ = b
+{-# ANN rotateL## (aigerSubstitution 'AIGER_BIT.rotateL) #-}
+
+rotateR## :: Bit -> Int -> Bit
+rotateR## b _ = b
+{-# ANN rotateR## (aigerSubstitution 'AIGER_BIT.rotateR) #-}
+
+popCount## :: Bit -> Int
+popCount## b = if eq## b low then 0 else 1
+{-# ANN popCount## (aigerSubstitution 'AIGER_BIT.popCount) #-}
+
 -- *** BitPack
 pack# :: Bit -> BitVector 1
 #if MIN_VERSION_base(4,15,0)
@@ -471,6 +559,7 @@ pack# (Bit (W# m) (W# b)) = BV (NS m) (NS b)
 pack# (Bit (W# m) (W# b)) = BV (NatS# m) (NatS# b)
 #endif
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN pack# (aigerSubstitution 'AIGER_BIT.pack) #-}
 {-# CLASH_OPAQUE pack# #-}
 {-# ANN pack# hasBlackBox #-}
 
@@ -485,6 +574,7 @@ unpack# (BV m b) = Bit (go m) (go b)
   go (NatJ# w) = W# (bigNatToWord w)
 #endif
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN unpack# (aigerSubstitution 'AIGER_BIT.unpack) #-}
 {-# CLASH_OPAQUE unpack# #-}
 {-# ANN unpack# hasBlackBox #-}
 
@@ -815,8 +905,8 @@ instance KnownNat n => Num (BitVector n) where
   (-)         = (-#)
   (*)         = (*#)
   negate      = negate#
-  abs         = id
-  signum bv   = resizeBV (pack# (reduceOr# bv))
+  abs         = abs#
+  signum      = signum#
   fromInteger = fromInteger# 0
 
 (+#),(-#),(*#) :: forall n . KnownNat n => BitVector n -> BitVector n -> BitVector n
@@ -880,6 +970,14 @@ negate# = go
 #else
   m = 1 `shiftL` fromInteger (natVal (Proxy @n))
 #endif
+
+abs# :: forall n. KnownNat n => BitVector n -> BitVector n
+abs# = id
+{-# ANN abs# (aigerSubstitution 'AIGER.abs) #-}
+
+signum# :: forall n. KnownNat n => BitVector n -> BitVector n
+signum# bv = resizeBV (pack# (reduceOr# bv))
+{-# ANN signum# (aigerSubstitution 'AIGER.signum) #-}
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
 {-# CLASH_OPAQUE fromInteger# #-}
@@ -973,20 +1071,56 @@ instance KnownNat n => Bits (BitVector n) where
   (.|.)             = or#
   xor               = xor#
   complement        = complement#
-  zeroBits          = 0
-  bit i             = replaceBit# 0 i high
-  setBit v i        = replaceBit# v i high
-  clearBit v i      = replaceBit# v i low
-  complementBit v i = replaceBit# v i (complement## (index# v i))
-  testBit v i       = eq## (index# v i) high
-  bitSizeMaybe v    = Just (size# v)
+  zeroBits          = zeroBits#
+  bit               = bit#
+  setBit            = setBit#
+  clearBit          = clearBit#
+  complementBit     = complementBit#
+  testBit           = testBit#
+  bitSizeMaybe      = bitSizeMaybe#
   bitSize           = size#
-  isSigned _        = False
-  shiftL v i        = shiftL# v i
-  shiftR v i        = shiftR# v i
-  rotateL v i       = rotateL# v i
-  rotateR v i       = rotateR# v i
-  popCount bv       = fromInteger (I.toInteger# (popCountBV (bv ++# (0 :: BitVector 1))))
+  isSigned          = isSigned#
+  shiftL            = shiftL#
+  shiftR            = shiftR#
+  rotateL           = rotateL#
+  rotateR           = rotateR#
+  popCount          = popCount#
+
+zeroBits# :: KnownNat n => BitVector n
+zeroBits# = 0
+{-# ANN zeroBits# (aigerSubstitution 'AIGER_BIT.zeroBits) #-}
+
+bit# :: KnownNat n => Int -> BitVector n
+bit# i = replaceBit# 0 i high
+{-# ANN bit# (aigerSubstitution 'AIGER_BIT.bit) #-}
+
+setBit# :: KnownNat n => BitVector n -> Int -> BitVector n
+setBit# v i = replaceBit# v i high
+{-# ANN setBit# (aigerSubstitution 'AIGER_BIT.setBit) #-}
+
+clearBit# :: KnownNat n => BitVector n -> Int -> BitVector n
+clearBit# v i = replaceBit# v i low
+{-# ANN clearBit# (aigerSubstitution 'AIGER_BIT.clearBit) #-}
+
+complementBit# :: KnownNat n => BitVector n -> Int -> BitVector n
+complementBit# v i = replaceBit# v i (complement## (index# v i))
+{-# ANN complementBit# (aigerSubstitution 'AIGER_BIT.complementBit) #-}
+
+testBit# :: KnownNat n => BitVector n -> Int -> Bool
+testBit# v i = eq## (index# v i) high
+{-# ANN testBit# (aigerSubstitution 'AIGER_BIT.testBit) #-}
+
+bitSizeMaybe# :: KnownNat n => BitVector n -> Maybe Int
+bitSizeMaybe# v = Just (size# v)
+{-# ANN bitSizeMaybe# (aigerSubstitution 'AIGER_BIT.bitSizeMaybe) #-}
+
+isSigned# :: KnownNat n => BitVector n -> Bool
+isSigned# _ = False
+{-# ANN isSigned# (aigerSubstitution 'AIGER_BIT.isSigned) #-}
+
+popCount# :: KnownNat n => BitVector n -> Int
+popCount# bv = fromInteger (I.toInteger# (popCountBV (bv ++# (0 :: BitVector 1))))
+{-# ANN popCount# (aigerSubstitution 'AIGER_BIT.popCount) #-}
 
 instance KnownNat n => FiniteBits (BitVector n) where
   finiteBitSize       = size#
@@ -1050,6 +1184,7 @@ instance Default (BitVector n) where
 -- * Accessors
 -- ** Length information
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN size# (aigerSubstitution 'AIGER.bitSize) #-}
 {-# CLASH_OPAQUE size# #-}
 {-# ANN size# hasBlackBox #-}
 size# :: KnownNat n => BitVector n -> Int
@@ -1387,8 +1522,8 @@ popCountBV bv =
 
 instance Resize BitVector where
   resize     = resizeBV
-  zeroExtend = (0 ++#)
-  signExtend = \bv -> (if msb# bv == low then id else complement) 0 ++# bv
+  zeroExtend = zeroExtend#
+  signExtend = signExtend#
   truncateB  = truncateB#
 
 resizeBV :: forall n m . (KnownNat n, KnownNat m) => BitVector n -> BitVector m
@@ -1396,6 +1531,15 @@ resizeBV = case compareSNat @n @m (SNat @n) (SNat @m) of
   SNatLE -> (++#) @n @(m-n) 0
   SNatGT -> truncateB# @m @(n - m)
 {-# INLINE resizeBV #-}
+{-# ANN resizeBV (aigerSubstitution ('AIGER.resize)) #-}
+
+zeroExtend#, signExtend# :: (KnownNat a, KnownNat b) => BitVector a -> BitVector (b + a)
+
+zeroExtend# = (0 ++#)
+{-# ANN zeroExtend# (aigerSubstitution ('AIGER.zeroExtend)) #-}
+
+signExtend# = \bv -> (if msb# bv == low then id else complement) 0 ++# bv
+{-# ANN signExtend# (aigerSubstitution ('AIGER.signExtend)) #-}
 
 truncateB# :: forall a b . KnownNat a => BitVector (a + b) -> BitVector a
 truncateB# = \(BV msk i) -> BV (msk `mod` m) (i `mod` m)
