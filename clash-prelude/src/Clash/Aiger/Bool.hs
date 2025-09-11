@@ -18,38 +18,10 @@ import Clash.Sized.Internal.BitVector (Bit)
 
 import qualified Clash.Aiger.Bit as Bit
 
--- Util
-toBit :: Bool -> Bit
-toBit b = as @Bit @Bool b
-
-asBool :: Bit -> Bool
-asBool b = as @Bool @Bit b
-
--- Num
 (+), (-), (*) :: Bool -> Bool -> Bool
 negate, abs, signum :: Bool -> Bool
-(+) (toBit -> b1) (toBit -> b2) = asBool $ (Bit.+) b1 b2
-(-) (toBit -> b1) (toBit -> b2) = asBool $ (Bit.-) b1 b2
-(*) (toBit -> b1) (toBit -> b2) = asBool $ (Bit.*) b1 b2
-negate (toBit -> b) = asBool $ Bit.negate b
-abs (toBit -> b) = asBool $ Bit.abs b
-signum (toBit -> b) = asBool $ Bit.signum b
-
--- Eq and Ord
 eq, neq, lt, le, gt, ge :: Bool -> Bool -> Bool
-eq (toBit -> b1) (toBit -> b2) = Bit.eq b1 b2
-neq (toBit -> b1) (toBit -> b2) = Bit.neq b1 b2
-lt (toBit -> b1) (toBit -> b2) = Bit.lt b1 b2
-le (toBit -> b1) (toBit -> b2) = Bit.le b1 b2
-gt (toBit -> b1) (toBit -> b2) = Bit.gt b1 b2
-ge (toBit -> b1) (toBit -> b2) = Bit.ge b1 b2
-
--- Bounded
 minBound, maxBound :: Bool
-minBound = as @Bool Bit.minBound
-maxBound = as @Bool Bit.maxBound
-
--- Bits
 and, or, xor :: Bool -> Bool -> Bool
 complement :: Bool -> Bool
 zeroBits :: Bool
@@ -68,28 +40,49 @@ setBit
   , rotateL
   , rotateR ::
     Bool -> Int -> Bool
+-- Num
+(+) (as @Bit -> b1) (as @Bit -> b2) = as @Bool $ (Bit.+) b1 b2
+(-) (as @Bit -> b1) (as @Bit -> b2) = as @Bool $ (Bit.-) b1 b2
+(*) (as @Bit -> b1) (as @Bit -> b2) = as @Bool $ (Bit.*) b1 b2
+negate (as @Bit -> b) = as @Bool $ Bit.negate b
+abs (as @Bit -> b) = as @Bool $ Bit.abs b
+signum (as @Bit -> b) = as @Bool $ Bit.signum b
+
+-- Eq and Ord
+eq (as @Bit -> b1) (as @Bit -> b2) = Bit.eq b1 b2
+neq (as @Bit -> b1) (as @Bit -> b2) = Bit.neq b1 b2
+lt (as @Bit -> b1) (as @Bit -> b2) = Bit.lt b1 b2
+le (as @Bit -> b1) (as @Bit -> b2) = Bit.le b1 b2
+gt (as @Bit -> b1) (as @Bit -> b2) = Bit.gt b1 b2
+ge (as @Bit -> b1) (as @Bit -> b2) = Bit.ge b1 b2
+
+-- Bounded
+minBound = as @Bool Bit.minBound
+maxBound = as @Bool Bit.maxBound
+
+-- Bits
 -- Basics
-and b1 b2 = asBool $ Bit.and (toBit b1) (toBit b2)
-or b1 b2 = asBool $ Bit.or (toBit b1) (toBit b2)
-xor b1 b2 = asBool $ Bit.xor (toBit b1) (toBit b2)
-complement b = asBool $ Bit.complement (toBit b)
+and b1 b2 = as @Bool $ Bit.and (as @Bit b1) (as @Bit b2)
+or b1 b2 = as @Bool $ Bit.or (as @Bit b1) (as @Bit b2)
+xor b1 b2 = as @Bool $ Bit.xor (as @Bit b1) (as @Bit b2)
+complement b = as @Bool $ Bit.complement (as @Bit b)
 
 -- Bit operations with constant value
-zeroBits = asBool $ Bit.zeroBits
-bitSizeMaybe b = Bit.bitSizeMaybe (toBit b)
-bitSize b = Bit.bitSize (toBit b)
-isSigned b = Bit.isSigned (toBit b)
-rotate b i = asBool $ Bit.rotate (toBit b) i
-rotateL b i = asBool $ Bit.rotateL (toBit b) i
-rotateR b i = asBool $ Bit.rotateR (toBit b) i
+zeroBits = as @Bool $ Bit.zeroBits
+bitSizeMaybe b = Bit.bitSizeMaybe (as @Bit b)
+bitSize b = Bit.bitSize (as @Bit b)
+isSigned b = Bit.isSigned (as @Bit b)
+rotate b i = as @Bool $ Bit.rotate (as @Bit b) i
+rotateL b i = as @Bool $ Bit.rotateL (as @Bit b) i
+rotateR b i = as @Bool $ Bit.rotateR (as @Bit b) i
 
 -- Bit operations with Int Eq:
-bit i = asBool $ Bit.bit i
-setBit b i = asBool $ Bit.setBit (toBit b) i
-clearBit b i = asBool $ Bit.clearBit (toBit b) i
-complementBit b i = asBool $ Bit.complementBit (toBit b) i
-testBit b i = Bit.testBit (toBit b) i
-shift b i = asBool $ Bit.shift (toBit b) i
-shiftL b i = asBool $ Bit.shiftL (toBit b) i
-shiftR b i = asBool $ Bit.shiftR (toBit b) i
-popCount b = Bit.popCount (toBit b)
+bit i = as @Bool $ Bit.bit i
+setBit b i = as @Bool $ Bit.setBit (as @Bit b) i
+clearBit b i = as @Bool $ Bit.clearBit (as @Bit b) i
+complementBit b i = as @Bool $ Bit.complementBit (as @Bit b) i
+testBit b i = Bit.testBit (as @Bit b) i
+shift b i = as @Bool $ Bit.shift (as @Bit b) i
+shiftL b i = as @Bool $ Bit.shiftL (as @Bit b) i
+shiftR b i = as @Bool $ Bit.shiftR (as @Bit b) i
+popCount b = Bit.popCount (as @Bit b)

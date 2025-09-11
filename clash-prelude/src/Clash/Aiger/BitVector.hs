@@ -5,7 +5,9 @@
 module Clash.Aiger.BitVector where
 
 import GHC.TypeLits (KnownNat, type (+), type (-), type (<=))
-import Prelude hiding (negate, truncate, (+))
+import Prelude hiding (negate, truncate, (*), (+), (-))
+
+import qualified Prelude
 
 import Clash.Aiger.Base (as, (++#))
 import Clash.Aiger.Util
@@ -13,73 +15,67 @@ import Clash.Sized.Internal.BitVector (Bit, BitVector)
 
 import qualified Clash.Aiger.Base as Base
 import qualified Clash.Aiger.Bit as Bit
-import {-# SOURCE #-} qualified Clash.Aiger.Int as INT
+import qualified Clash.Aiger.Util as Util
 
+(+)
+  , (-)
+  , (*) ::
+    forall n. (KnownNat n) => BitVector n -> BitVector n -> BitVector n
+negate, abs, signum :: forall n. (KnownNat n) => BitVector n -> BitVector n
+neq
+  , eq
+  , lt
+  , le
+  , gt
+  , ge ::
+    forall n. (KnownNat n) => BitVector n -> BitVector n -> Bool
+minBound, maxBound :: forall n. (KnownNat n) => BitVector n
+and
+  , or
+  , xor ::
+    forall n. (KnownNat n) => BitVector n -> BitVector n -> BitVector n
+complement :: forall n. (KnownNat n) => BitVector n -> BitVector n
+zeroBits :: forall n. (KnownNat n) => BitVector n
+bit :: forall n. (KnownNat n) => Int -> BitVector n
+testBit :: forall n. (KnownNat n) => BitVector n -> Int -> Bool
+bitSizeMaybe :: forall n. (KnownNat n) => BitVector n -> Maybe Int
+bitSize, popCount :: forall n. (KnownNat n) => BitVector n -> Int
+isSigned :: (KnownNat n) => BitVector n -> Bool
+setBit
+  , clearBit
+  , complementBit
+  , shiftL
+  , shiftR
+  , rotateL
+  , rotateR ::
+    (KnownNat n) => BitVector n -> Int -> BitVector n
 -- Undefined
 undefined# :: (KnownNat n) => BitVector n
+-- Resize
+truncateB :: forall a b. (KnownNat a) => BitVector (a + b) -> BitVector a
+zeroExtend ::
+  forall m n. (KnownNat n, KnownNat m, m <= n) => BitVector m -> BitVector n
+signExtend ::
+  forall m n. (KnownNat n, KnownNat m, m <= n) => BitVector m -> BitVector n
+resize :: forall n m. (KnownNat n, KnownNat m) => BitVector n -> BitVector m
+
 undefined# = repeatBV (Base.undefined##)
 
 -- Resize
-truncateB :: forall a b. (KnownNat a) => BitVector (a + b) -> BitVector a
 truncateB bv = b
  where
   (_, b) = Base.split# bv
-
-zeroExtend ::
-  forall m n. (KnownNat n, KnownNat m, m <= n) => BitVector m -> BitVector n
 zeroExtend bv = (all0BV :: BitVector (n - m)) Base.++# bv
-
-signExtend ::
-  forall m n. (KnownNat n, KnownNat m, m <= n) => BitVector m -> BitVector n
 signExtend bv = (repeatBV (msb bv) :: BitVector (n - m)) ++# bv
-
-resize :: forall n m. (KnownNat n, KnownNat m) => BitVector n -> BitVector m
 resize b1 = comp @n @m truncate grow b1
  where
   truncate ::
     (m <= n) => BitVector (m + (n - m)) -> BitVector m
   truncate = truncateB
-
   grow :: (n <= m) => BitVector n -> BitVector m
   grow = zeroExtend
 
--- #####
--- BitVector NumWithResize or something already, not in scope tho
---
--- plus# ::
---   forall m n.
---   (KnownNat m, KnownNat n, m <= Max m n, n <= Max m n) =>
---   BitVector m -> BitVector n -> BitVector (Max m n + 1)
--- plus# a b = a1 +# b1
---  where
---   a1 = growBV a
---   b1 = growBV b
---
--- minus# ::
---   forall m n.
---   (KnownNat m, KnownNat n, m <= Max m n, n <= Max m n) =>
---   BitVector m ->
---   BitVector n ->
---   BitVector
---     (Max m n + 1)
--- minus# a b = a1 -# b1
---  where
---   a1 = growBV a
---   b1 = growBV b
---
--- times# ::
---   forall m n.
---   (KnownNat m, KnownNat n) => BitVector m -> BitVector n -> BitVector (m + n)
--- times# a b = a1 *# b1
---  where
---   a1 = growBV a
---   b1 = growBV b
-
 -- Num BitVector
-(-)
-  , (+)
-  , (*) ::
-    forall n. (KnownNat n) => BitVector n -> BitVector n -> BitVector n
 (+) a b = fst $ adder a b
 (-) a b = a + (negate b)
 (*) a b = shiftAdd b
@@ -88,17 +84,12 @@ resize b1 = comp @n @m truncate grow b1
     forall m. (KnownNat m) => BitVector m -> BitVector n
   shiftAdd bv = maybeLDestructBV go def bv
    where
-    go bb c = (shiftlBV (shiftAdd bb)) + (andA c)
+    go bb c = (shiftlBV Base.low (shiftAdd bb)) + (andA c)
     def = all0BV
   andA i = mapBV (`Bit.and` i) a
-
-negate :: forall n. (KnownNat n) => BitVector n -> BitVector n
 negate bv = fst $ negateBV bv
-
--- fromInteger :: (KnownNat n) => Integer -> Integer -> BitVector n
--- fromInteger (as @(Int) -> i1) (as @(Int) -> i2) = resize $ zipWithBV z i1 i2
---  where
---   z b1 b2 = if b1 == Base.low then b2 else Base.undefined##
+abs = id
+signum bv = if ((reduceOr bv) `Bit.eq` Base.low) then 0 else 1
 
 -- Util
 
@@ -137,7 +128,6 @@ halfAdder b1 b2 = (r, c)
   r = b1 `Bit.xor` b2
 
 -- Eq
-neq, eq :: (KnownNat n) => BitVector n -> BitVector n -> Bool
 neq bv1 bv2 = as @Bool $ Bit.complement $ eq# bv1 bv2
 eq bv1 bv2 = as @Bool $ eq# bv1 bv2
 
@@ -145,11 +135,6 @@ eq# :: (KnownNat n) => BitVector n -> BitVector n -> Bit
 eq# bv1 bv2 = reduceAnd (zipWithBV (Bit.eq#) bv1 bv2)
 
 -- Ord
-lt
-  , le
-  , gt
-  , ge ::
-    forall n. (KnownNat n) => BitVector n -> BitVector n -> Bool
 lt bv1 bv2 = maybeDestructBV2 go False bv1 bv2
  where
   go b1 b2 bs1 bs2 = if Bit.eq b1 b2 then lt bs1 bs2 else Bit.lt b1 b2
@@ -164,21 +149,51 @@ ge bv1 bv2 = maybeDestructBV2 go True bv1 bv2
   go b1 b2 bs1 bs2 = if Bit.eq b1 b2 then ge bs1 bs2 else Bit.gt b1 b2
 
 -- Bounded
-minBound, maxBound :: (KnownNat n) => BitVector n
 minBound = all0BV
 maxBound = all1BV
 
 -- Bits
-and
-  , or
-  , xor ::
-    forall n. (KnownNat n) => BitVector n -> BitVector n -> BitVector n
 and = zipWithBV Bit.and
+complement = mapBV (Bit.complement)
 or = zipWithBV Bit.or
 xor = zipWithBV Bit.xor
 
-complement :: (KnownNat n) => BitVector n -> BitVector n
-complement = mapBV (Bit.complement)
+zeroBits = all0BV
+bit i = Util.replaceBit all0BV i (const Base.high)
+setBit bv i = Util.replaceBit bv i (const Base.high)
+clearBit bv i = Util.replaceBit bv i (const Base.low)
+complementBit bv i = Util.replaceBit bv i (\bt -> Bit.complement bt)
+testBit bv i = (getIndexBV bv i) `Bit.eq` Base.high
+bitSizeMaybe bv = Just (bitSize bv)
+bitSize bv = foldrBV go 0 bv
+ where
+  go :: a -> Int -> Int
+  go _ (i :: Int) = i Prelude.+ 1
+isSigned _ = False
+popCount bv = foldrBV go 0 bv
+ where
+  go b i = if Bit.eq b Base.high then i Prelude.+ 1 else i
+
+shiftL bv i =
+  if
+    | i < 0 -> undefined#
+    | i == 0 -> bv
+    | otherwise -> shiftL (shiftlBV Base.low bv) (i Prelude.- 1)
+shiftR bv i =
+  if
+    | i < 0 -> undefined#
+    | i == 0 -> bv
+    | otherwise -> shiftR (shiftrBV Base.low bv) (i Prelude.- 1)
+rotateL bv i =
+  if
+    | i < 0 -> undefined#
+    | i == 0 -> bv
+    | otherwise -> rotateL (rotatelBV bv) (i Prelude.- 1)
+rotateR bv i =
+  if
+    | i < 0 -> undefined#
+    | i == 0 -> bv
+    | otherwise -> rotateR (rotaterBV bv) (i Prelude.- 1)
 
 reduceAnd, reduceOr, reduceXor :: (KnownNat n) => BitVector n -> Bit
 reduceAnd bv = foldrBV Bit.and Base.high bv
@@ -194,54 +209,22 @@ lsb bv = maybeLDestructBV go Base.low bv
   go _ a = a
 
 shiftlBV
-  , shiftrBV
-  , rotatelBV
+  , shiftrBV ::
+    forall n. (KnownNat n) => Bit -> BitVector n -> BitVector n
+rotatelBV
   , rotaterBV ::
     forall n. (KnownNat n) => BitVector n -> BitVector n
-shiftlBV bv = maybeDestructBV go all0BV bv
+shiftlBV replacementBit bv = maybeDestructBV go all0BV bv
  where
   go _ bs = bs ++# low
-  low = as @(BitVector 1) Base.low
-shiftrBV bv = maybeLDestructBV go all0BV bv
+  low = as @(BitVector 1) replacementBit
+shiftrBV replacementBit bv = maybeLDestructBV go all0BV bv
  where
   go bs _ = low ++# bs
-  low = as @(BitVector 1) Base.low
+  low = as @(BitVector 1) replacementBit
 rotatelBV bv = maybeDestructBV go all0BV bv
  where
   go b bs = bs ++# as @(BitVector 1) b
 rotaterBV bv = maybeLDestructBV go all0BV bv
  where
   go bs b = as @(BitVector 1) b ++# bs
-
--- I use the Haskell native version of integer comparison here, since that does not
--- make a cyclic dependency.
---
--- I want to use this system of going the haskell route for every occurance where a
--- function of a datatype requires stuff of a datatype of a higher level
---
--- required higher functions: Int Num and EqOrd
-shiftL
-  , shiftR
-  , rotateL
-  , rotateR ::
-    forall n. (KnownNat n) => BitVector n -> Int -> BitVector n
-shiftL bv i =
-  if
-    | i `INT.lt` 0 -> undefined#
-    | i `INT.eq` 0 -> bv
-    | otherwise -> shiftL (shiftlBV bv) (i INT.- 1)
-shiftR bv i =
-  if
-    | i `INT.lt` 0 -> undefined#
-    | i `INT.eq` 0 -> bv
-    | otherwise -> shiftR (shiftrBV bv) (i INT.- 1)
-rotateL bv i =
-  if
-    | i `INT.lt` 0 -> undefined#
-    | i `INT.eq` 0 -> bv
-    | otherwise -> rotateL (rotatelBV bv) (i INT.- 1)
-rotateR bv i =
-  if
-    | i `INT.lt` 0 -> undefined#
-    | i `INT.eq` 0 -> bv
-    | otherwise -> rotateR (rotaterBV bv) (i INT.- 1)
