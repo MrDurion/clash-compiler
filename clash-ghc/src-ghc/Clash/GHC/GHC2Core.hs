@@ -540,6 +540,7 @@ coreToTerm primMap aigerMap unlocs = term
         _ ->
           return (C.TyApp (C.Prim C.undefined) ty')
 
+
     term' (Case e b ty alts) = do
      let usesBndr = any ( not . isEmptyVarSet . exprSomeFreeVars (== b))
                   $ rhssOfAlts alts
@@ -593,11 +594,11 @@ coreToTerm primMap aigerMap unlocs = term
     lookupPrim :: Text -> Maybe (Maybe CompiledPrimitive)
     lookupPrim nm = extractPrim <$> HashMap.lookup nm primMap
 
+    buildVarFromName name typ = C.Var <$> (C.mkGlobalId <$> (coreToType $ typ) <*> (coreToName (id) (getUnique) (qualifiedNameStringM) (name)))
       
     var x = 
-        --FIXME lookup aiger substitutions and do `var aigerX`
         case lookup (getName x) aigerMap of
-            Just sub -> C.Var <$> (C.mkGlobalId <$> (coreToType $ varType x) <*> (coreToName (id) (getUnique) (qualifiedNameStringM) (sub)))
+            Just sub -> buildVarFromName sub (varType x)
             (Nothing) -> var' x
         
 

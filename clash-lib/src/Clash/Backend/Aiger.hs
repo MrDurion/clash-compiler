@@ -8,14 +8,15 @@ import Control.Lens.TH (makeLenses)
 import Control.Lens.Tuple (_1)
 import Control.Monad.Extra (concatMapM)
 import Control.Monad.State (State)
+import Data.Foldable (foldrM)
 import Data.HashSet (HashSet)
 import Data.List ((!?))
 import Data.Monoid (Ap (..))
 import Data.Text (Text)
-import Debug.Trace (trace, traceM)
+import Debug.Trace (traceM)
 import GHC.Data.Maybe (orElse)
 import GHC.Num (integerToInt)
-import Prelude hiding (lookup)
+import Prelude hiding (and, lookup, or)
 
 import qualified Data.Map as Map
 import qualified Data.Text as TextS
@@ -443,7 +444,7 @@ convertExprToAigerExpr :: Expr -> AigerM AigerExpr
 convertExprToAigerExpr e = case e of
   (Identifier eI Nothing) -> pure $ Id (Pointer (toText eI))
   (Identifier eI (Just a)) -> pure $ modifier (Pointer (toText eI)) a
-  (Literal mhwt l) -> pure $ parseLiteral mhwt l
+  (Literal mhwt l) -> pure $ parseLiteral (fst <$> mhwt) l
   (DataCon hwt _ ex) -> parseDataConE hwt ex
   (DataTag _ _) -> error ("TODO found " ++ show e)
   (BlackBoxE n _ _ _ _ templateContext _) -> parseBlackBoxE n templateContext
@@ -452,9 +453,9 @@ convertExprToAigerExpr e = case e of
   (IfThenElse _ _ _) -> error ("TODO found " ++ show e)
   (Noop) -> pure Empty
 
-parseLiteral :: Maybe (HWType, Size) -> Literal -> AigerExpr
+parseLiteral :: Maybe (HWType) -> Literal -> AigerExpr
 parseLiteral Nothing (NumLit i) = error ("Num Literal without HWType found: " ++ show i)
-parseLiteral (Just (hwt, _)) (NumLit i) = case hwt of
+parseLiteral (Just hwt) (NumLit i) = case hwt of
   Unsigned n -> BitRange $ makeUnsigned i n
   Signed n -> BitRange $ makeSigned i n
   _ ->
@@ -522,7 +523,7 @@ parseDataConE h es = do
 parseBlackBoxE :: Text -> BlackBoxContext -> AigerM AigerExpr
 parseBlackBoxE n context =
   let a = show (bbName context)
-   in ( trace a $ case a of
+   in ( case a of
           "\"Clash.Aiger.Base.undefined##\"" -> do
             pure $ BitRange [undefinedBit]
           "\"Clash.Aiger.Base.high\"" -> do
@@ -610,7 +611,7 @@ parseDeclaration :: Declaration -> AigerM ()
 parseDeclaration d = do
   case d of
     (Assignment i _ e) -> do parseAssignment (Pointer (toText i)) e
-    (CondAssignment _ _ _ _ _) -> error ("DECL: " ++ show d)
+    (CondAssignment i exprType c compType arms) -> do parseCondAssignment (Pointer (toText i)) c exprType arms compType
     (InstDecl _ _ _ _ _ _ _) -> error ("DECL: " ++ show d)
     (BlackBoxD n _ _ _ _ t) -> (parseBlackBoxD n t)
     (CompDecl _ _) -> error ("DECL: " ++ show d)
@@ -631,6 +632,109 @@ parseDeclaration d = do
   parseAssignment i e = do
     aigerExpr <- convertExprToAigerExpr e
     addAssignment i aigerExpr
+
+  parseCondAssignment ::
+    AigerPointer -> Expr -> HWType -> [(Maybe Literal, Expr)] -> HWType -> AigerM ()
+  parseCondAssignment pointer scrut exprType arms compType = do
+    exprScrut <- convertExprToAigerExpr scrut
+    aigerArms <- mapM (armsToAigerExpr) arms
+    let zeroes = Concat $ map (\_ -> zero) [0 .. exprSize - 1]
+    (outputResults, _) <- foldrM (reduceConcat exprScrut) (zeroes, one) aigerArms
+    addAssignment pointer outputResults
+   where
+    compSize = typeSize compType
+    exprSize = typeSize exprType
+
+    zero = (BitRange [(AigerIndex 0 False)])
+    one = (BitRange [(AigerIndex 0 True)])
+
+    armsToAigerExpr ::
+      (Maybe Literal, Expr) -> AigerM (Maybe AigerExpr, AigerExpr)
+    armsToAigerExpr (ml, e) = do
+      expr <- convertExprToAigerExpr e
+      let a = case ml of
+            Nothing -> Nothing
+            Just lit -> Just $ parseLiteral (Just (compType)) lit
+      pure (a, expr)
+
+    reduceConcat ::
+      AigerExpr ->
+      (Maybe AigerExpr, AigerExpr) ->
+      (AigerExpr, AigerExpr) ->
+      AigerM (AigerExpr, AigerExpr)
+    reduceConcat _ (Nothing, e) (acc, allprevnomatch) = do
+      (result, allnomatch) <- passOutputForCaseNoComp e allprevnomatch
+      res <- fullOr result acc exprSize
+      pure (res, allnomatch)
+    reduceConcat scr (Just comp, e) (acc, allprevnomatch) = do
+      (result, allnomatch) <- passOutputForCase scr comp e allprevnomatch
+      res <- fullOr result acc exprSize
+      pure (res, allnomatch)
+
+    mapExpr ::
+      AigerExpr -> Int -> (AigerExpr -> AigerM AigerExpr) -> AigerM AigerExpr
+    mapExpr bits size f = Concat <$> mapM f (extractBits bits size)
+
+    passOutputForCase ::
+      AigerExpr ->
+      AigerExpr ->
+      AigerExpr ->
+      AigerExpr ->
+      AigerM (AigerExpr, AigerExpr)
+    passOutputForCase scr pat expr allPrevDontMatch = do
+      isEqual <- fullEquals scr pat compSize
+      passExpr <- and isEqual allPrevDontMatch
+      result <- Concat <$> mapM (and passExpr) (extractBits expr exprSize)
+      nextAllPrevNoMatch <- and allPrevDontMatch (Complement isEqual)
+      pure (result, nextAllPrevNoMatch)
+
+    passOutputForCaseNoComp ::
+      AigerExpr ->
+      AigerExpr ->
+      AigerM (AigerExpr, AigerExpr)
+    passOutputForCaseNoComp expr allPrevDontMatch = do
+      let passExpr = allPrevDontMatch
+      result <- mapExpr expr exprSize (and passExpr)
+      pure (result, zero)
+
+    indexExpr :: Int -> AigerExpr -> AigerExpr
+    indexExpr i ex = Range i (i + 1) ex
+
+    reduceAnd bits = foldrM (\a -> \b -> and a b) one bits
+
+    extractBits e size = do
+      map (\i -> indexExpr i e) [0 .. size - 1]
+
+    fullOr :: AigerExpr -> AigerExpr -> Int -> AigerM AigerExpr
+    fullOr a b size = Concat <$> (mapM (orr a b) [0 .. size - 1])
+     where
+      orr aa bb i = do
+        let ia = (indexExpr i aa)
+        let ib = (indexExpr i bb)
+        or ia ib
+
+    fullEquals :: AigerExpr -> AigerExpr -> Int -> AigerM AigerExpr
+    fullEquals a b size = do
+      equalbits <- mapM (eeqq a b) [0 .. size - 1]
+      reduceAnd equalbits
+     where
+      eeqq aa bb i = do
+        let ia = (indexExpr i aa)
+        let ib = (indexExpr i bb)
+        equals ia ib
+
+    and a b = do
+      index <- getNewIndex
+      addUnsolvedAndNodes $ UnsolvedAndNode index a b
+      pure $ And index
+    or a b = do
+      aa <- (and (Complement a) (Complement b))
+      pure $ Complement aa
+    xor a b = do
+      aandb <- (and a b)
+      invaandb <- (and (Complement a) (Complement b))
+      Complement <$> (or aandb invaandb)
+    equals a b = Complement <$> (xor a b)
 
 genAIGER ::
   ClashOpts ->
@@ -750,7 +854,10 @@ saveAnds = do
     addAndNode $ AndNode ai ail air
   getIndex ap i = do
     indeces <- getIndeces ap
-    pure $ indeces !? i `orElse` error "OutofBounds with getIndex"
+    pure $
+      indeces !? i
+        `orElse` error
+          ("OutofBounds with getIndex, " ++ show ap ++ " with indeces: " ++ show indeces)
 
 -- Writing state
 

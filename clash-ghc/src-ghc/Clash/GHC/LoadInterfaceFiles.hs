@@ -121,7 +121,6 @@ import qualified Clash.Util.Interpolate              as I
 import           Clash.GHC.Util
 --FIXME ordering and aligning
 import Clash.Annotations.AigerSubstitution (AigerSubstitution (..), aigerModuleNames)
-import Debug.Trace (traceM)
 
 -- | Data structure tracking loaded binders (and their related data)
 data LoadedBinders = LoadedBinders
@@ -408,7 +407,6 @@ loadAigerSubstitutionFunctions ::
 loadAigerSubstitutionFunctions aigerModuleName = do
   let mname = Module.mkModuleName aigerModuleName
   nameMod <- lift $  GHC.findModule mname Nothing 
-  traceM $ show $ showPprUnsafe nameMod
 #if MIN_VERSION_ghc(9,4,0)
   env <- lift GHC.getSession
   ifaceM <- lift (liftIO (loadIface env nameMod))
