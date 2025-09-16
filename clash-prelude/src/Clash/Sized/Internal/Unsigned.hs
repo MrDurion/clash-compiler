@@ -219,6 +219,7 @@ newtype Unsigned (n :: Nat) =
 {-# ANN U hasBlackBox #-}
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN size# (aigerSubstitution 'AIGER.bitSize) #-}
 {-# CLASH_OPAQUE size# #-}
 {-# ANN size# hasBlackBox #-}
 size# :: KnownNat n => Unsigned n -> Int
@@ -255,12 +256,14 @@ instance KnownNat n => BitPack (Unsigned n) where
   unpack = unpack#
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN pack# (aigerSubstitution 'AIGER.pack) #-}
 {-# CLASH_OPAQUE pack# #-}
 {-# ANN pack# hasBlackBox #-}
 pack# :: Unsigned n -> BitVector n
 pack# (U i) = BV 0 i
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN unpack# (aigerSubstitution 'AIGER.unpack) #-}
 {-# CLASH_OPAQUE unpack# #-}
 {-# ANN unpack# hasBlackBox #-}
 unpack# :: KnownNat n => BitVector n -> Unsigned n
@@ -272,12 +275,14 @@ instance Eq (Unsigned n) where
   (/=) = neq#
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN eq# (aigerSubstitution 'AIGER.eq) #-}
 {-# CLASH_OPAQUE eq# #-}
 {-# ANN eq# hasBlackBox #-}
 eq# :: Unsigned n -> Unsigned n -> Bool
 eq# (U v1) (U v2) = v1 == v2
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN neq# (aigerSubstitution 'AIGER.neq) #-}
 {-# CLASH_OPAQUE neq# #-}
 {-# ANN neq# hasBlackBox #-}
 neq# :: Unsigned n -> Unsigned n -> Bool
@@ -291,18 +296,22 @@ instance Ord (Unsigned n) where
 
 lt#,ge#,gt#,le# :: Unsigned n -> Unsigned n -> Bool
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN lt# (aigerSubstitution 'AIGER.lt) #-}
 {-# CLASH_OPAQUE lt# #-}
 {-# ANN lt# hasBlackBox #-}
 lt# (U n) (U m) = n < m
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN ge# (aigerSubstitution 'AIGER.ge) #-}
 {-# CLASH_OPAQUE ge# #-}
 {-# ANN ge# hasBlackBox #-}
 ge# (U n) (U m) = n >= m
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN gt# (aigerSubstitution 'AIGER.gt) #-}
 {-# CLASH_OPAQUE gt# #-}
 {-# ANN gt# hasBlackBox #-}
 gt# (U n) (U m) = n > m
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN le# (aigerSubstitution 'AIGER.le) #-}
 {-# CLASH_OPAQUE le# #-}
 {-# ANN le# hasBlackBox #-}
 le# (U n) (U m) = n <= m
@@ -394,12 +403,14 @@ instance KnownNat n => Bounded (Unsigned n) where
 minBound# :: Unsigned n
 minBound# = U 0
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN minBound# (aigerSubstitution 'AIGER.minBound) #-}
 {-# CLASH_OPAQUE minBound# #-}
 {-# ANN minBound# hasBlackBox #-}
 
 maxBound# :: forall n. KnownNat n => Unsigned n
 maxBound# = let m = 1 `shiftL` (natToNum @n) in  U (m - 1)
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN maxBound# (aigerSubstitution 'AIGER.maxBound) #-}
 {-# CLASH_OPAQUE maxBound# #-}
 {-# ANN maxBound# hasBlackBox #-}
 
@@ -411,8 +422,8 @@ instance KnownNat n => Num (Unsigned n) where
   (-)         = (-#)
   (*)         = (*#)
   negate      = negate#
-  abs         = id
-  signum bv   = resize# (unpack# (BV.pack# (reduceOr bv)))
+  abs         = abs#
+  signum      = signum#
   fromInteger = fromInteger#
 
 (+#),(-#),(*#) :: forall n . KnownNat n => Unsigned n -> Unsigned n -> Unsigned n
@@ -460,6 +471,12 @@ negate# = \(U i) -> U (negateMod m i)
 #else
   where m = 1 `shiftL` fromInteger (natVal (Proxy @n))
 #endif
+
+abs#, signum# :: KnownNat n => Unsigned n -> Unsigned n
+abs#         = id
+{-# ANN abs# (aigerSubstitution 'AIGER.abs) #-}
+signum# bv   = resize# (unpack# (BV.pack# (reduceOr bv)))
+{-# ANN signum# (aigerSubstitution 'AIGER.signum) #-}
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
 {-# CLASH_OPAQUE fromInteger# #-}
@@ -552,20 +569,20 @@ instance KnownNat n => Bits (Unsigned n) where
   (.|.)             = or#
   xor               = xor#
   complement        = complement#
-  zeroBits          = 0
-  bit i             = replaceBit i high 0
-  setBit v i        = replaceBit i high v
-  clearBit v i      = replaceBit i low  v
-  complementBit v i = replaceBit i (BV.complement## (v ! i)) v
-  testBit v i       = v ! i == high
-  bitSizeMaybe v    = Just (size# v)
+  zeroBits          = zeroBits#
+  bit               = bit#
+  setBit            = setBit#
+  clearBit          = clearBit#
+  complementBit     = complementBit#
+  testBit           = testBit#
+  bitSizeMaybe      = bitSizeMaybe#
   bitSize           = size#
-  isSigned _        = False
-  shiftL v i        = shiftL# v i
-  shiftR v i        = shiftR# v i
-  rotateL v i       = rotateL# v i
-  rotateR v i       = rotateR# v i
-  popCount u        = popCount (pack# u)
+  isSigned          = isSigned#
+  shiftL            = shiftL#
+  shiftR            = shiftR#
+  rotateL           = rotateL#
+  rotateR           = rotateR#
+  popCount          = popCount#
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
 {-# ANN and# (aigerSubstitution 'AIGER.and) #-}
@@ -596,8 +613,45 @@ complement# :: forall n . KnownNat n => Unsigned n -> Unsigned n
 complement# = \(U i) -> U (complementN i)
   where complementN = complementMod (natVal (Proxy @n))
 
+zeroBits# :: KnownNat n => Unsigned n
+zeroBits# = 0
+{-# ANN zeroBits# (aigerSubstitution 'AIGER.zeroBits) #-}
+
+bit# :: KnownNat n => Int -> Unsigned n
+bit# i = replaceBit i high 0
+{-# ANN bit# (aigerSubstitution 'AIGER.bit) #-}
+
+setBit# :: KnownNat n => Unsigned n -> Int -> Unsigned n
+setBit# v i = replaceBit i high v
+{-# ANN setBit# (aigerSubstitution 'AIGER.setBit) #-}
+
+clearBit# :: KnownNat n => Unsigned n -> Int -> Unsigned n
+clearBit# v i = replaceBit i low  v
+{-# ANN clearBit# (aigerSubstitution 'AIGER.clearBit) #-}
+
+complementBit# :: KnownNat n => Unsigned n -> Int -> Unsigned n
+complementBit# v i = replaceBit i (BV.complement## (v ! i)) v
+{-# ANN complementBit# (aigerSubstitution 'AIGER.complementBit) #-}
+
+testBit# :: KnownNat n => Unsigned n -> Int -> Bool
+testBit# v i = v ! i == high
+{-# ANN testBit# (aigerSubstitution 'AIGER.testBit) #-}
+
+bitSizeMaybe# :: KnownNat n => Unsigned n -> Maybe Int
+bitSizeMaybe# v = Just (size# v)
+{-# ANN bitSizeMaybe# (aigerSubstitution 'AIGER.bitSizeMaybe) #-}
+
+isSigned# :: KnownNat n => Unsigned n -> Bool
+isSigned# _ = False
+{-# ANN isSigned# (aigerSubstitution 'AIGER.isSigned) #-}
+
+popCount# :: KnownNat n => Unsigned n -> Int
+popCount# u = popCount (pack# u)
+{-# ANN popCount# (aigerSubstitution 'AIGER.popCount) #-}
+
 shiftL#, shiftR#, rotateL#, rotateR# :: forall n .KnownNat n => Unsigned n -> Int -> Unsigned n
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN shiftL# (aigerSubstitution 'AIGER.shiftL) #-}
 {-# CLASH_OPAQUE shiftL# #-}
 {-# ANN shiftL# hasBlackBox #-}
 shiftL# = \(U v) i ->
@@ -619,6 +673,7 @@ shiftL# = \(U v) i ->
 #endif
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN shiftR# (aigerSubstitution 'AIGER.shiftR) #-}
 {-# CLASH_OPAQUE shiftR# #-}
 {-# ANN shiftR# hasBlackBox #-}
 -- shiftR# doesn't need the KnownNat constraint
@@ -630,6 +685,7 @@ shiftR# (U v) i
   | otherwise = U (shiftR v i)
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN rotateL# (aigerSubstitution 'AIGER.rotateL) #-}
 {-# CLASH_OPAQUE rotateL# #-}
 {-# ANN rotateL# hasBlackBox #-}
 rotateL# =
@@ -658,6 +714,7 @@ rotateL# =
 #endif
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN rotateR# (aigerSubstitution 'AIGER.rotateR) #-}
 {-# CLASH_OPAQUE rotateR# #-}
 {-# ANN rotateR# hasBlackBox #-}
 rotateR# =
@@ -693,10 +750,15 @@ instance KnownNat n => FiniteBits (Unsigned n) where
 
 instance Resize Unsigned where
   resize     = resize#
-  zeroExtend = extend
+  zeroExtend = zeroExtend#
   truncateB  = resize#
 
+zeroExtend# :: forall a b. (KnownNat a, KnownNat b) => Unsigned a -> Unsigned (b + a)
+zeroExtend# = extend
+{-# ANN zeroExtend# (aigerSubstitution 'AIGER.zeroExtend) #-}
+
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN resize# (aigerSubstitution 'AIGER.resize) #-}
 {-# CLASH_OPAQUE resize# #-}
 {-# ANN resize# hasBlackBox #-}
 resize# :: forall n m . KnownNat m => Unsigned n -> Unsigned m

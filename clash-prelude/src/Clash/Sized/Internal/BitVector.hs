@@ -1088,39 +1088,39 @@ instance KnownNat n => Bits (BitVector n) where
 
 zeroBits# :: KnownNat n => BitVector n
 zeroBits# = 0
-{-# ANN zeroBits# (aigerSubstitution 'AIGER_BIT.zeroBits) #-}
+{-# ANN zeroBits# (aigerSubstitution 'AIGER.zeroBits) #-}
 
 bit# :: KnownNat n => Int -> BitVector n
 bit# i = replaceBit# 0 i high
-{-# ANN bit# (aigerSubstitution 'AIGER_BIT.bit) #-}
+{-# ANN bit# (aigerSubstitution 'AIGER.bit) #-}
 
 setBit# :: KnownNat n => BitVector n -> Int -> BitVector n
 setBit# v i = replaceBit# v i high
-{-# ANN setBit# (aigerSubstitution 'AIGER_BIT.setBit) #-}
+{-# ANN setBit# (aigerSubstitution 'AIGER.setBit) #-}
 
 clearBit# :: KnownNat n => BitVector n -> Int -> BitVector n
 clearBit# v i = replaceBit# v i low
-{-# ANN clearBit# (aigerSubstitution 'AIGER_BIT.clearBit) #-}
+{-# ANN clearBit# (aigerSubstitution 'AIGER.clearBit) #-}
 
 complementBit# :: KnownNat n => BitVector n -> Int -> BitVector n
 complementBit# v i = replaceBit# v i (complement## (index# v i))
-{-# ANN complementBit# (aigerSubstitution 'AIGER_BIT.complementBit) #-}
+{-# ANN complementBit# (aigerSubstitution 'AIGER.complementBit) #-}
 
 testBit# :: KnownNat n => BitVector n -> Int -> Bool
 testBit# v i = eq## (index# v i) high
-{-# ANN testBit# (aigerSubstitution 'AIGER_BIT.testBit) #-}
+{-# ANN testBit# (aigerSubstitution 'AIGER.testBit) #-}
 
 bitSizeMaybe# :: KnownNat n => BitVector n -> Maybe Int
 bitSizeMaybe# v = Just (size# v)
-{-# ANN bitSizeMaybe# (aigerSubstitution 'AIGER_BIT.bitSizeMaybe) #-}
+{-# ANN bitSizeMaybe# (aigerSubstitution 'AIGER.bitSizeMaybe) #-}
 
 isSigned# :: KnownNat n => BitVector n -> Bool
 isSigned# _ = False
-{-# ANN isSigned# (aigerSubstitution 'AIGER_BIT.isSigned) #-}
+{-# ANN isSigned# (aigerSubstitution 'AIGER.isSigned) #-}
 
 popCount# :: KnownNat n => BitVector n -> Int
 popCount# bv = fromInteger (I.toInteger# (popCountBV (bv ++# (0 :: BitVector 1))))
-{-# ANN popCount# (aigerSubstitution 'AIGER_BIT.popCount) #-}
+{-# ANN popCount# (aigerSubstitution 'AIGER.popCount) #-}
 
 instance KnownNat n => FiniteBits (BitVector n) where
   finiteBitSize       = size#
@@ -1541,7 +1541,7 @@ zeroExtend# = (0 ++#)
 signExtend# = \bv -> (if msb# bv == low then id else complement) 0 ++# bv
 {-# ANN signExtend# (aigerSubstitution ('AIGER.signExtend)) #-}
 
-truncateB# :: forall a b . KnownNat a => BitVector (a + b) -> BitVector a
+truncateB# :: forall a b . (KnownNat a, KnownNat b) => BitVector (a + b) -> BitVector a
 truncateB# = \(BV msk i) -> BV (msk `mod` m) (i `mod` m)
 #if MIN_VERSION_base(4,15,0)
   where m = 1 `naturalShiftL` naturalToWord (natVal (Proxy @a))

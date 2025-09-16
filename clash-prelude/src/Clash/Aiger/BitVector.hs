@@ -64,8 +64,11 @@ undefined# = repeatBV (Base.undefined##)
 truncateB bv = b
  where
   (_, b) = Base.split# bv
+
 zeroExtend bv = (all0BV) Base.++# bv
+
 signExtend bv = (repeatBV (msb bv)) ++# bv
+
 resize b1 = comp @n @m truncate grow b1
  where
   truncate = truncateB @m @(n - m)

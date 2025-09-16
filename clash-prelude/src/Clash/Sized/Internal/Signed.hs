@@ -207,6 +207,7 @@ instance NFDataX (Signed n) where
   rnfX = rwhnfX
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN size# (aigerSubstitution 'AIGER.bitSize) #-}
 {-# CLASH_OPAQUE size# #-}
 {-# ANN size# hasBlackBox #-}
 size# :: KnownNat n => Signed n -> Int
@@ -384,6 +385,7 @@ minBound# =
     0 -> 0
     n -> S (negate $ 2 ^ (n - 1))
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN minBound# (aigerSubstitution 'AIGER.minBound) #-}
 {-# CLASH_OPAQUE minBound# #-}
 {-# ANN minBound# hasBlackBox #-}
 
@@ -393,6 +395,7 @@ maxBound# =
     0 -> 0
     n -> S (2 ^ (n - 1) - 1)
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN maxBound# (aigerSubstitution 'AIGER.maxBound) #-}
 {-# CLASH_OPAQUE maxBound# #-}
 {-# ANN maxBound# hasBlackBox #-}
 
@@ -407,8 +410,7 @@ instance KnownNat n => Num (Signed n) where
   (*)         = (*#)
   negate      = negate#
   abs         = abs#
-  signum s    = if s < 0 then (-1) else
-                   if s > 0 then 1 else 0
+  signum      = signum#
   fromInteger = fromInteger#
 
 (+#), (-#), (*#) :: forall n . KnownNat n => Signed n -> Signed n -> Signed n
@@ -453,7 +455,7 @@ instance KnownNat n => Num (Signed n) where
         mB   = 1 `shiftL` sz
         mask = mB - 1
 
-negate#,abs# :: forall n . KnownNat n => Signed n -> Signed n
+negate#,abs#,signum# :: forall n . KnownNat n => Signed n -> Signed n
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
 {-# ANN negate# (aigerSubstitution 'AIGER.negate) #-}
 {-# CLASH_OPAQUE negate# #-}
@@ -466,6 +468,7 @@ negate# =
   m = 1 `shiftL0` fromInteger (natVal (Proxy @n) -1)
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN abs# (aigerSubstitution 'AIGER.abs) #-}
 {-# CLASH_OPAQUE abs# #-}
 {-# ANN abs# hasBlackBox #-}
 abs# =
@@ -474,6 +477,9 @@ abs# =
     in  if z == m then S n else S z
  where
   m = 1 `shiftL0` fromInteger (natVal (Proxy @n) -1)
+
+{-# ANN signum# (aigerSubstitution 'AIGER.signum) #-}
+signum# s = if s < 0 then (-1) else if s > 0 then 1 else 0
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
 {-# CLASH_OPAQUE fromInteger# #-}
@@ -582,20 +588,20 @@ instance KnownNat n => Bits (Signed n) where
   (.|.)             = or#
   xor               = xor#
   complement        = complement#
-  zeroBits          = 0
-  bit i             = replaceBit i high 0
-  setBit v i        = replaceBit i high v
-  clearBit v i      = replaceBit i low  v
-  complementBit v i = replaceBit i (BV.complement## (v ! i)) v
-  testBit v i       = v ! i == 1
-  bitSizeMaybe v    = Just (size# v)
-  bitSize           = size#
-  isSigned _        = True
-  shiftL v i        = shiftL# v i
-  shiftR v i        = shiftR# v i
-  rotateL v i       = rotateL# v i
-  rotateR v i       = rotateR# v i
-  popCount s        = popCount (pack# s)
+  zeroBits          = zeroBits#
+  bit               = bit#
+  setBit            = setBit#
+  clearBit          = clearBit#
+  complementBit     = complementBit#
+  testBit           = testBit#
+  bitSizeMaybe      = bitSizeMaybe#
+  bitSize           = bitSize#
+  isSigned          = isSigned#
+  shiftL            = shiftL#
+  shiftR            = shiftR#
+  rotateL           = rotateL#
+  rotateR           = rotateR#
+  popCount          = popCount#
 
 and#,or#,xor# :: forall n . KnownNat n => Signed n -> Signed n -> Signed n
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
@@ -635,8 +641,49 @@ complement# = \(S a) -> fromInteger_INLINE sz mB mask (complement a)
         mB   = 1 `shiftL` sz
         mask = mB - 1
 
+zeroBits# :: KnownNat n => Signed n
+zeroBits# = 0
+{-# ANN zeroBits# (aigerSubstitution 'AIGER.zeroBits) #-}
+
+bit# :: KnownNat n => Int -> Signed n
+bit# i = replaceBit i high 0
+{-# ANN bit# (aigerSubstitution 'AIGER.bit) #-}
+
+setBit# :: KnownNat n => Signed n -> Int -> Signed n
+setBit# v i = replaceBit i high v
+{-# ANN setBit# (aigerSubstitution 'AIGER.setBit) #-}
+
+clearBit# :: KnownNat n => Signed n -> Int -> Signed n
+clearBit# v i = replaceBit i low  v
+{-# ANN clearBit# (aigerSubstitution 'AIGER.clearBit) #-}
+
+complementBit# :: KnownNat n => Signed n -> Int -> Signed n
+complementBit# v i = replaceBit i (BV.complement## (v ! i)) v
+{-# ANN complementBit# (aigerSubstitution 'AIGER.complementBit) #-}
+
+testBit# :: KnownNat n => Signed n -> Int -> Bool
+testBit# v i = v ! i == 1
+{-# ANN testBit# (aigerSubstitution 'AIGER.testBit) #-}
+
+bitSizeMaybe# :: KnownNat n => Signed n -> Maybe Int
+bitSizeMaybe# v = Just (size# v)
+{-# ANN bitSizeMaybe# (aigerSubstitution 'AIGER.bitSizeMaybe) #-}
+
+bitSize# :: KnownNat n => Signed n -> Int
+bitSize# = size#
+{-# ANN bitSize# (aigerSubstitution 'AIGER.bitSize) #-}
+
+isSigned# :: KnownNat n => Signed n -> Bool
+isSigned# _ = True
+{-# ANN isSigned# (aigerSubstitution 'AIGER.isSigned) #-}
+
+popCount# :: KnownNat n => Signed n -> Int
+popCount# s = popCount (pack# s)
+{-# ANN popCount# (aigerSubstitution 'AIGER.popCount) #-}
+
 shiftL#,shiftR#,rotateL#,rotateR# :: forall n . KnownNat n => Signed n -> Int -> Signed n
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN shiftL# (aigerSubstitution 'AIGER.shiftL) #-}
 {-# CLASH_OPAQUE shiftL# #-}
 {-# ANN shiftL# hasBlackBox #-}
 shiftL# = \(S n) b ->
@@ -649,6 +696,7 @@ shiftL# = \(S n) b ->
   mask = mB - 1
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN shiftR# (aigerSubstitution 'AIGER.shiftR) #-}
 {-# CLASH_OPAQUE shiftR# #-}
 {-# ANN shiftR# hasBlackBox #-}
 shiftR# =
@@ -663,6 +711,7 @@ shiftR# =
   mask = mB - 1
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN rotateL# (aigerSubstitution 'AIGER.rotateL) #-}
 {-# CLASH_OPAQUE rotateL# #-}
 {-# ANN rotateL# hasBlackBox #-}
 rotateL# =
@@ -684,6 +733,7 @@ rotateL# =
   maskM = mB - 1
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN rotateR# (aigerSubstitution 'AIGER.rotateR) #-}
 {-# CLASH_OPAQUE rotateR# #-}
 {-# ANN rotateR# hasBlackBox #-}
 rotateR# =
@@ -711,7 +761,7 @@ instance KnownNat n => FiniteBits (Signed n) where
 
 instance Resize Signed where
   resize       = resize#
-  zeroExtend s = unpack# (0 ++# pack s)
+  zeroExtend   = zeroExtend#
   truncateB    = truncateB#
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
@@ -735,10 +785,15 @@ resize# s@(S i)
                    then S (i' - mask)
                    else S i'
 
+zeroExtend# :: forall a b. (KnownNat a, KnownNat b) => Signed a -> Signed (b + a)
+zeroExtend# s = unpack# (0 ++# pack s)
+{-# ANN zeroExtend# (aigerSubstitution 'AIGER.zeroExtend) #-}
+
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN truncateB# (aigerSubstitution 'AIGER.truncateB) #-}
 {-# CLASH_OPAQUE truncateB# #-}
 {-# ANN truncateB# hasBlackBox #-}
-truncateB# :: forall m n . KnownNat m => Signed (m + n) -> Signed m
+truncateB# :: forall m n . (KnownNat m, KnownNat n) => Signed (m + n) -> Signed m
 truncateB# = \(S n) -> fromInteger_INLINE sz mB mask n
   where sz   = fromInteger (natVal (Proxy @m)) - 1
         mB   = 1 `shiftL` sz

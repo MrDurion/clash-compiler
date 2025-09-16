@@ -67,6 +67,11 @@ resize (as @(BitVector n) -> bv) = as @(Signed m) $ go bv
   grow :: (n <= m) => BitVector n -> BitVector m
   grow = BV.signExtend @n @(m - n)
 
+truncateB :: forall a b. (KnownNat a, KnownNat b) => Signed(a + b) -> Signed a
+truncateB (as @(BitVector (b + a)) -> bv) = as @(Signed a) $ BV.truncateB bv
+zeroExtend :: forall a b. (KnownNat a, KnownNat b) => Signed a -> Signed (b + a)
+zeroExtend (as @(BitVector a) -> bv) = as @(Signed (b + a)) $ BV.zeroExtend bv
+
 -- Num
 (+) (as @(BitVector n) -> bv1) (as @(BitVector n) -> bv2) = as $ bv1 BV.+ bv2
 (-) (as @(BitVector n) -> bv1) (as @(BitVector n) -> bv2) = as $ bv1 BV.- bv2
@@ -112,7 +117,7 @@ popCount (as @(BitVector n) -> bv) = BV.popCount bv
 shiftL (as @(BitVector n) -> bv) i = as @(Signed n) $ BV.shiftL bv i
 
 -- is different
-isSigned (as @(BitVector n) -> bv) = Bit.eq (BV.msb bv) Base.high
+isSigned _ = True
 shiftR (as @(BitVector n) -> bv) i =
   if
     | i < 0 -> undefined#

@@ -76,7 +76,7 @@ instance (Resize f) => Resize (Compose Wrapping f) where
   {-# INLINE truncateB #-}
   truncateB
     :: forall a b
-     . (KnownNat a)
+     . (KnownNat a, KnownNat b)
     => Compose Wrapping f (a + b)
     -> Compose Wrapping f a
   truncateB = coerce (truncateB @f @a @b)

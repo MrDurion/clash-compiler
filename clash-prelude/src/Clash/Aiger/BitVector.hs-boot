@@ -1,6 +1,6 @@
 module Clash.Aiger.BitVector where
 
-import GHC.TypeLits (KnownNat, type (+), type (<=))
+import GHC.TypeLits (KnownNat, type (+)) 
 import Prelude hiding (and, maxBound, minBound, negate, or, (*), (+), (-))
 
 import {-# SOURCE #-} Clash.Sized.Internal.BitVector (Bit, BitVector)

@@ -77,7 +77,7 @@ instance (Resize f) => Resize (Compose Erroring f) where
   {-# INLINE truncateB #-}
   truncateB
     :: forall a b
-     . (KnownNat a)
+     . (KnownNat a, KnownNat b)
     => Compose Erroring f (a + b)
     -> Compose Erroring f a
   truncateB = coerce (truncateB @f @a @b)

@@ -51,7 +51,7 @@ class Resize (f :: Nat -> Type) where
   signExtend :: (KnownNat a, KnownNat b) => f a -> f (b + a)
   signExtend = resize
   -- | Remove bits from the MSB
-  truncateB :: KnownNat a => f (a + b) -> f a
+  truncateB :: (KnownNat a, KnownNat b) => f (a + b) -> f a
 
 -- | Helper function of 'checkedFromIntegral', 'checkedResize' and 'checkedTruncateB'
 checkIntegral ::

@@ -77,7 +77,7 @@ instance (Resize f) => Resize (Compose Saturating f) where
   {-# INLINE truncateB #-}
   truncateB
     :: forall a b
-     . (KnownNat a)
+     . (KnownNat a, KnownNat b)
     => Compose Saturating f (a + b)
     -> Compose Saturating f a
   truncateB = coerce (truncateB @f @a @b)

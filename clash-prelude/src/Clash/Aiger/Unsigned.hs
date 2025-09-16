@@ -17,12 +17,8 @@ import qualified Clash.Aiger.BitVector as BV
 unpack :: forall n. (KnownNat n) => BitVector n -> Unsigned n
 pack :: forall n. (KnownNat n) => Unsigned n -> BitVector n
 resize :: forall n m. (KnownNat n, KnownNat m) => Unsigned n -> Unsigned m
-truncateB ::
-  forall a b. (KnownNat a, KnownNat b) => Unsigned (a + b) -> Unsigned a
-zeroExtend ::
-  forall m n. (KnownNat n, KnownNat m, m <= n) => Unsigned m -> Unsigned n
-signExtend ::
-  forall m n. (KnownNat n, KnownNat m, m <= n) => Unsigned m -> Unsigned n
+truncateB :: forall a b. (KnownNat a, KnownNat b) => Unsigned (a + b) -> Unsigned a
+zeroExtend, signExtend :: forall a b. (KnownNat a, KnownNat b) => Unsigned a -> Unsigned (b + a)
 (+)
   , (-)
   , (*) ::
@@ -62,8 +58,8 @@ pack = as @(BitVector n) @(Unsigned n)
 -- Resize
 resize (as @(BitVector n) -> bv) = as @(Unsigned m) $ BV.resize bv
 truncateB (as @(BitVector (a + b)) -> bv) = as @(Unsigned a) $ BV.truncateB bv
-signExtend (as @(BitVector m) -> bv) = as @(Unsigned n) $ BV.signExtend @m @(n - m) bv
-zeroExtend (as @(BitVector m) -> bv) = as @(Unsigned n) $ BV.zeroExtend @m @(n - m) bv
+signExtend (as @(BitVector a) -> bv) = as @(Unsigned (b + a)) $ BV.signExtend bv
+zeroExtend (as @(BitVector a) -> bv) = as @(Unsigned (b + a)) $ BV.zeroExtend bv
 
 -- Undefined
 undefined# = as @(Unsigned n) BV.undefined#
