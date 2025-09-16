@@ -202,6 +202,7 @@ import           Clash.Primitives.Util       (AigerSubstitutionMap)
 import           Clash.Unique                (fromGhcUnique)
 import           Clash.Util
 import           Clash.GHC.Util
+import GHC.Plugins (mkVanillaGlobal)
 
 
 instance Hashable Name where
@@ -594,11 +595,14 @@ coreToTerm primMap aigerMap unlocs = term
     lookupPrim :: Text -> Maybe (Maybe CompiledPrimitive)
     lookupPrim nm = extractPrim <$> HashMap.lookup nm primMap
 
-    buildVarFromName name typ = C.Var <$> (C.mkGlobalId <$> (coreToType $ typ) <*> (coreToName (id) (getUnique) (qualifiedNameStringM) (name)))
+
+    findVar name ogVar = mkVanillaGlobal name typ
+     where
+      typ = varType ogVar
       
     var x = 
         case lookup (getName x) aigerMap of
-            Just sub -> buildVarFromName sub (varType x)
+            Just sub -> var' $ findVar sub (x)
             (Nothing) -> var' x
         
 
