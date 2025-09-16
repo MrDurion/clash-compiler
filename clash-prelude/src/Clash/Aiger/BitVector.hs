@@ -17,54 +17,28 @@ import qualified Clash.Aiger.Base as Base
 import qualified Clash.Aiger.Bit as Bit
 import qualified Clash.Aiger.Util as Util
 
-(+)
-  , (-)
-  , (*) ::
-    forall n. (KnownNat n) => BitVector n -> BitVector n -> BitVector n
-negate, abs, signum :: forall n. (KnownNat n) => BitVector n -> BitVector n
-minBound, maxBound :: forall n. (KnownNat n) => BitVector n
-and
-  , or
-  , xor ::
-    forall n. (KnownNat n) => BitVector n -> BitVector n -> BitVector n
-complement :: forall n. (KnownNat n) => BitVector n -> BitVector n
-zeroBits :: forall n. (KnownNat n) => BitVector n
-bit :: forall n. (KnownNat n) => Int -> BitVector n
-testBit :: forall n. (KnownNat n) => BitVector n -> Int -> Bool
-bitSizeMaybe :: forall n. (KnownNat n) => BitVector n -> Maybe Int
-bitSize, popCount :: forall n. (KnownNat n) => BitVector n -> Int
-isSigned :: (KnownNat n) => BitVector n -> Bool
-setBit
-  , clearBit
-  , complementBit
-  , shiftL
-  , shiftR
-  , rotateL
-  , rotateR ::
-    (KnownNat n) => BitVector n -> Int -> BitVector n
 -- Undefined
-undefined# :: (KnownNat n) => BitVector n
 -- Resize
-truncateB ::
-  forall a b. (KnownNat a, KnownNat b) => BitVector (a + b) -> BitVector a
-zeroExtend
-  , signExtend ::
-    (KnownNat a, KnownNat b) => BitVector a -> BitVector (b + a)
-resize :: forall n m. (KnownNat n, KnownNat m) => BitVector n -> BitVector m
-
 -- Implementations
 -- Undefined
+undefined# :: (KnownNat n) => BitVector n
 undefined# = repeatBV (Base.undefined##)
 
 -- Resize
+truncateB ::
+  forall a b. (KnownNat a, KnownNat b) => BitVector (a + b) -> BitVector a
 truncateB bv = b
  where
   (_, b) = Base.split# bv
 
+zeroExtend
+  , signExtend ::
+    forall a b.
+    (KnownNat a, KnownNat b) => BitVector a -> BitVector (b + a)
 zeroExtend bv = (all0BV) Base.++# bv
-
 signExtend bv = (repeatBV (msb bv)) ++# bv
 
+resize :: forall n m. (KnownNat n, KnownNat m) => BitVector n -> BitVector m
 resize b1 = comp @n @m truncate grow b1
  where
   truncate :: (m <= n) => BitVector n -> BitVector m
@@ -73,6 +47,10 @@ resize b1 = comp @n @m truncate grow b1
   grow = zeroExtend @n @(m - n)
 
 -- Num
+(+)
+  , (-)
+  , (*) ::
+    forall n. (KnownNat n) => BitVector n -> BitVector n -> BitVector n
 (+) a b = fst $ adder a b
 (-) a b = a + (negate b)
 (*) a b = shiftAdd b
@@ -84,6 +62,8 @@ resize b1 = comp @n @m truncate grow b1
     go bb c = (shiftlBV Base.low (shiftAdd bb)) + (andA c)
     def = all0BV
   andA i = mapBV (`Bit.and` i) a
+
+negate, abs, signum :: forall n. (KnownNat n) => BitVector n -> BitVector n
 negate bv = fst $ negateBV bv
 abs = id
 signum bv = if ((reduceOr bv) `Bit.eq` Base.low) then 0 else 1
@@ -158,10 +138,30 @@ ge bv1 bv2 = maybeDestructBV2 go True bv1 bv2
   go b1 b2 bs1 bs2 = if Bit.eq b1 b2 then ge bs1 bs2 else Bit.gt b1 b2
 
 -- Bounded
+minBound, maxBound :: forall n. (KnownNat n) => BitVector n
 minBound = all0BV
 maxBound = all1BV
 
 -- Bits
+and
+  , or
+  , xor ::
+    forall n. (KnownNat n) => BitVector n -> BitVector n -> BitVector n
+complement :: forall n. (KnownNat n) => BitVector n -> BitVector n
+zeroBits :: forall n. (KnownNat n) => BitVector n
+bit :: forall n. (KnownNat n) => Int -> BitVector n
+testBit :: forall n. (KnownNat n) => BitVector n -> Int -> Bool
+bitSizeMaybe :: forall n. (KnownNat n) => BitVector n -> Maybe Int
+bitSize, popCount :: forall n. (KnownNat n) => BitVector n -> Int
+isSigned :: (KnownNat n) => BitVector n -> Bool
+setBit
+  , clearBit
+  , complementBit
+  , shiftL
+  , shiftR
+  , rotateL
+  , rotateR ::
+    (KnownNat n) => BitVector n -> Int -> BitVector n
 and = zipWithBV Bit.and
 complement = mapBV (Bit.complement)
 or = zipWithBV Bit.or
@@ -204,6 +204,29 @@ rotateR bv i =
     | i == 0 -> bv
     | otherwise -> rotateR (rotaterBV bv) (i Prelude.- 1)
 
+shiftlBV
+  , shiftrBV ::
+    forall n. (KnownNat n) => Bit -> BitVector n -> BitVector n
+shiftlBV replacementBit bv = maybeDestructBV go all0BV bv
+ where
+  go _ bs = bs ++# low
+  low = as @(BitVector 1) replacementBit
+shiftrBV replacementBit bv = maybeLDestructBV go all0BV bv
+ where
+  go bs _ = low ++# bs
+  low = as @(BitVector 1) replacementBit
+
+rotatelBV
+  , rotaterBV ::
+    forall n. (KnownNat n) => BitVector n -> BitVector n
+rotatelBV bv = maybeDestructBV go all0BV bv
+ where
+  go b bs = bs ++# as @(BitVector 1) b
+rotaterBV bv = maybeLDestructBV go all0BV bv
+ where
+  go bs b = as @(BitVector 1) b ++# bs
+
+-- Extra
 reduceAnd, reduceOr, reduceXor :: (KnownNat n) => BitVector n -> Bit
 reduceAnd bv = foldrBV Bit.and Base.high bv
 reduceOr bv = foldrBV Bit.or Base.low bv
@@ -216,24 +239,3 @@ msb bv = maybeDestructBV go Base.low bv
 lsb bv = maybeLDestructBV go Base.low bv
  where
   go _ a = a
-
-shiftlBV
-  , shiftrBV ::
-    forall n. (KnownNat n) => Bit -> BitVector n -> BitVector n
-rotatelBV
-  , rotaterBV ::
-    forall n. (KnownNat n) => BitVector n -> BitVector n
-shiftlBV replacementBit bv = maybeDestructBV go all0BV bv
- where
-  go _ bs = bs ++# low
-  low = as @(BitVector 1) replacementBit
-shiftrBV replacementBit bv = maybeLDestructBV go all0BV bv
- where
-  go bs _ = low ++# bs
-  low = as @(BitVector 1) replacementBit
-rotatelBV bv = maybeDestructBV go all0BV bv
- where
-  go b bs = bs ++# as @(BitVector 1) b
-rotaterBV bv = maybeLDestructBV go all0BV bv
- where
-  go bs b = as @(BitVector 1) b ++# bs

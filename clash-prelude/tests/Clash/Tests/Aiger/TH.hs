@@ -9,59 +9,38 @@
 
 module Clash.Tests.Aiger.TH where
 
-import GHC.TypeLits (KnownNat)
-import Language.Haskell.TH
+import Control.Exception (SomeException, evaluate, try)
+import GHC.IO (unsafePerformIO)
+import Test.Tasty
 
-import qualified Hedgehog as H
-import qualified Hedgehog.Gen as Gen
-import qualified Hedgehog.Range as Range
+import qualified Test.Tasty.QuickCheck as QC
 
-import Clash.Sized.Internal.BitVector (BitVector)
+import Clash.Sized.Internal.BitVector (Bit (..))
 
-import qualified Test.Tasty.Hedgehog.Extra as H
+instance QC.Arbitrary Bit where
+  arbitrary :: QC.Gen Bit
+  arbitrary = QC.elements [(Bit 0 0), (Bit 0 1)]
 
-genTests :: Name -> Name -> Q Exp
-genTests fName bvName = do
-  exps <- mapM (genTHTest fName bvName) [0, 1, 2, 16, 127, 128]
-  return $ ListE exps
+class TestEq f where
+  eqProp :: f -> f -> QC.Property
 
--- Helper to build: f (Proxy :: Proxy N)
-genTHTest :: Name -> Name -> Int -> Q Exp
-genTHTest fName bvName n = do
-  let t = LitT (NumTyLit (fromIntegral n))
-  let genCompareTestsTyped = (AppTypeE (VarE 'genCompareTests) t)
-  let applied = AppE (AppE (genCompareTestsTyped) (VarE fName)) (VarE bvName)
-  htest <- [e|H.testPropertyXXX ("bitvector " ++ show (n :: Int))|]
-  pure $ AppE htest applied
+instance {-# OVERLAPS #-} (Eq a, Show a) => TestEq a where
+  eqProp x y = QC.counterexample ("Expected " ++ show y ++ " but got " ++ show x) (x == y)
 
--- Genable
-class (Show b, Eq b) => Genable b where
-  genThing :: H.Gen (b)
+instance (TestEq b) => TestEq (Int -> b) where
+  eqProp f g = QC.forAll (QC.arbitrary `QC.suchThat` (> 0)) $ \x -> case safeEval (g x) of
+    Nothing -> QC.discard
+    Just b -> eqProp (f x) b
 
-instance Genable Int where
-  genThing = Gen.integral (Range.linear 0 512)
+instance {-# OVERLAPS #-} (QC.Arbitrary a, Show a, TestEq b) => TestEq (a -> b) where
+  eqProp f g = QC.property $ \x -> case safeEval (g x) of
+    Nothing -> QC.discard
+    Just b -> eqProp (f x) b
 
-instance (KnownNat n) => Genable (BitVector n) where
-  genThing = Gen.integral (Range.linear 0 265)
+eqTest :: (TestEq f) => String -> f -> f -> TestTree
+eqTest name f g = QC.testProperty name (eqProp f g)
 
--- CompareTestable
-class CompareTestable a where
-  genTest :: a -> a -> H.PropertyT IO ()
-
-instance {-# OVERLAPS #-} forall a. (Show a, Eq a) => CompareTestable a where
-  genTest a b = do
-    a H.=== b
-
-instance {-# OVERLAPS #-} (Genable b, CompareTestable a) => CompareTestable (b -> a) where
-  genTest f1 f2 = do
-    (c :: b) <- H.forAll genThing
-    genTest (f1 c) (f2 c)
-
-genCompareTests ::
-  forall n q a.
-  (Genable (q n), KnownNat n, CompareTestable a) =>
-  (q n -> a) ->
-  (q n -> a) ->
-  H.Property
-genCompareTests aigerF bvF = H.property $ do
-  genTest aigerF bvF
+safeEval :: forall a. a -> Maybe a
+safeEval x = unsafePerformIO $ do
+  r <- try (evaluate x) :: IO (Either SomeException a)
+  pure (either (const Nothing) Just r)

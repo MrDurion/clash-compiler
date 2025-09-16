@@ -61,7 +61,7 @@ pack = as @(BitVector n) @(Unsigned n)
 -- Resize
 resize (as @(BitVector n) -> bv) = as @(Unsigned m) $ BV.resize bv
 truncateB (as @(BitVector (a + b)) -> bv) = as @(Unsigned a) $ BV.truncateB bv
-signExtend (as @(BitVector a) -> bv) = as @(Unsigned (b + a)) $ BV.signExtend bv
+signExtend (as @(BitVector a) -> bv) = as @(Unsigned (b + a)) $ BV.zeroExtend bv
 zeroExtend (as @(BitVector a) -> bv) = as @(Unsigned (b + a)) $ BV.zeroExtend bv
 
 -- Undefined

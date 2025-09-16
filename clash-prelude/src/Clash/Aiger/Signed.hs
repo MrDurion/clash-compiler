@@ -17,6 +17,7 @@ import Clash.Sized.Internal.Signed (Signed)
 import qualified Clash.Aiger.Base as Base
 import qualified Clash.Aiger.Bit as Bit
 import qualified Clash.Aiger.BitVector as BV
+import qualified Clash.Aiger.Util as Util
 
 unpack :: forall n. (KnownNat n) => BitVector n -> Signed n
 pack :: forall n. (KnownNat n) => Signed n -> BitVector n
@@ -57,15 +58,18 @@ pack = as @(BitVector n) @(Signed n)
 undefined# = as @(Signed n) BV.undefined#
 
 -- Resize
-resize (as @(BitVector n) -> bv) = as @(Signed m) $ go bv
+resize s = comp @n @m (truncate s) (grow s)
  where
-  go :: BitVector n -> BitVector m
-  go = comp @n @m truncate grow
-  truncate ::
-    (m <= n) => BitVector (m + (n - m)) -> BitVector m
-  truncate = BV.truncateB
-  grow :: (n <= m) => BitVector n -> BitVector m
-  grow = BV.signExtend @n @(m - n)
+  truncate :: (m <= n) => Signed (m + (n - m)) -> Signed m
+  truncate (as @(BitVector (m + (n - m))) -> bv) = as @(Signed m) final
+   where
+    truncatedBV :: BitVector m
+    truncatedBV = BV.truncateB bv
+    signBit = BV.msb bv
+    replaceFirstBitWithSignBit _ bs = (as @(BitVector 1) signBit) Base.++# bs
+    final = Util.maybeDestructBV replaceFirstBitWithSignBit all0BV truncatedBV
+  grow :: (n <= m) => Signed n -> Signed m
+  grow = signExtend @n @(m - n)
 
 truncateB :: forall n m. (KnownNat n, KnownNat m) => Signed (m + n) -> Signed n
 truncateB (as @(BitVector (m + n)) -> bv) = as @(Signed n) $ BV.truncateB bv
@@ -73,12 +77,15 @@ truncateB (as @(BitVector (m + n)) -> bv) = as @(Signed n) $ BV.truncateB bv
 zeroExtend :: forall a b. (KnownNat a, KnownNat b) => Signed a -> Signed (b + a)
 zeroExtend (as @(BitVector a) -> bv) = as @(Signed (b + a)) $ BV.zeroExtend bv
 
+signExtend :: forall a b. (KnownNat a, KnownNat b) => Signed a -> Signed (b + a)
+signExtend (as @(BitVector a) -> bv) = as @(Signed (b + a)) $ BV.signExtend bv
+
 -- Num
 (+) (as @(BitVector n) -> bv1) (as @(BitVector n) -> bv2) = as $ bv1 BV.+ bv2
 (-) (as @(BitVector n) -> bv1) (as @(BitVector n) -> bv2) = as $ bv1 BV.- bv2
 (*) (as @(BitVector n) -> bv1) (as @(BitVector n) -> bv2) = as $ bv1 BV.* bv2
 negate (as @(BitVector n) -> bv) = as @(Signed n) $ BV.negate bv
-abs (as @(BitVector n) -> bv) = as @(Signed n) $ BV.negate bv
+abs s = if lt s 0 then negate s else s
 signum (as @(BitVector n) -> bv) =
   as @(Signed n) $
     if

@@ -8,43 +8,17 @@ import Clash.Sized.Internal.BitVector (Bit, BitVector)
 import qualified Clash.Aiger.Base as Base
 import {-# SOURCE #-} qualified Clash.Aiger.Int as INT
 
-(+), (-), (*) :: Bit -> Bit -> Bit
-negate, abs, signum :: Bit -> Bit
-neq, eq, lt, le, gt, ge :: Bit -> Bit -> Bool
-minBound, maxBound :: Bit
-and, or, xor :: Bit -> Bit -> Bit
-complement :: Bit -> Bit
-zeroBits :: Bit
-bit :: Int -> Bit
-testBit :: Bit -> Int -> Bool
-bitSizeMaybe :: Bit -> Maybe Int
-bitSize, popCount :: Bit -> Int
-isSigned :: Bit -> Bool
-setBit
-  , clearBit
-  , complementBit
-  , shift
-  , shiftL
-  , shiftR
-  , rotate
-  , rotateL
-  , rotateR ::
-    Bit -> Int -> Bit
 -- Num
+(+), (-), (*) :: Bit -> Bit -> Bit
 (+) = xor
 (-) = xor
 (*) = and
+negate, abs, signum :: Bit -> Bit
 negate = id
 abs = id
 signum = id
 
--- fromInteger :: Word# -> Integer -> Bit
--- fromInteger w1 i1 = if BV.lsb w2 == Base.low then BV.lsb i2 else Base.undefined##
---  where
---   w2  = as @(BitVector 64) $ W# w1
---   i2 = as @(BitVector 64) $ i1
-
---BitPack
+-- BitPack
 pack :: Bit -> BitVector 1
 pack = as @(BitVector 1)
 
@@ -52,6 +26,7 @@ unpack :: BitVector 1 -> Bit
 unpack = as @Bit
 
 -- Eq and Ord
+neq, eq, lt, le, gt, ge :: Bit -> Bit -> Bool
 neq b1 b2 = as @Bool $ neq# b1 b2
 eq b1 b2 = as @Bool $ eq# b1 b2
 lt b1 b2 = as @Bool $ lt# b1 b2
@@ -68,32 +43,52 @@ le# b1 b2 = complement $ gt# b1 b2
 ge# b1 b2 = complement $ lt# b1 b2
 
 -- Bounded
+minBound, maxBound :: Bit
 minBound = Base.low
 maxBound = Base.high
 
--- Bit
+-- Bits
 -- Basic bit operations
+and, or, xor :: Bit -> Bit -> Bit
 and = Base.and
-complement = Base.complement
 or b1 b2 = complement $ (complement b1) `and` (complement b2)
 xor b1 b2 = complement $ (b1 `and` b2) `or` (complement b1 `and` complement b2)
 
+complement :: Bit -> Bit
+complement = Base.complement
+
 -- Bit operations with constant value
+zeroBits :: Bit
 zeroBits = Base.low
+bitSizeMaybe :: Bit -> Maybe Int
 bitSizeMaybe _ = Just 1
+bitSize :: Bit -> Int
 bitSize _ = 1
+isSigned :: Bit -> Bool
 isSigned _ = False
+rotate, rotateL, rotateR :: Bit -> Int -> Bit
 rotate = const
 rotateL = const
 rotateR = const
 
 -- Bit operations with Int Eq:
+bit :: Int -> Bit
 bit i = if i `INT.eq` 0 then Base.high else Base.low
+testBit :: Bit -> Int -> Bool
+testBit b i = if i `INT.eq` 0 then eq b Base.high else False
+popCount :: Bit -> Int
+popCount b = if eq b Base.low then 0 else 1
+
+setBit
+  , clearBit
+  , complementBit
+  , shift
+  , shiftL
+  , shiftR ::
+    Bit -> Int -> Bit
 setBit b i = if i `INT.eq` 0 then Base.high else b
 clearBit b i = if i `INT.eq` 0 then Base.low else b
 complementBit b i = if i `INT.eq` 0 then Base.complement b else b
-testBit b i = if i `INT.eq` 0 then eq b Base.high else False
 shift b i = if i `INT.eq` 0 then b else Base.low
 shiftL b i = if i `INT.eq` 0 then b else Base.low
 shiftR b i = if i `INT.eq` 0 then b else Base.low
-popCount b = if eq b Base.low then 0 else 1
