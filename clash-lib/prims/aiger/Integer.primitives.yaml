@@ -1,9 +1,4 @@
 - BlackBox:
-    name: Clash.Sized.Internal.Unsigned.fromInteger#
-    kind: Expression
-    template: ~ARG[1]
-    workInfo: Never
-- BlackBox:
     name: Clash.Sized.Internal.BitVector.toInteger#
     kind: Expression
     template: ~ARG[1] ~LIT[0]
@@ -23,21 +18,8 @@
     kind: Expression
     template: ~LIT[0] ~ARG[1]
     workInfo: Never
-# - BlackBox:
-#     name: GHC.Prim.int8ToInt#
-#     kind: Expression
-#     type: "int8ToInt# :: Int8 -> Int#"
-#     template: ~ARG[0]
-#     workInfo: Never
-# - BlackBox:
-#     name: GHC.Num.Integer.integerToInt#
-#     kind: Expression
-#     type: "integerToInt# :: Integer -> Int#"
-#     template: ~ARG[0]
-#     workInfo: Never
-# - BlackBox:
-#     name: GHC.Prim.intToInt8#
-#     kind: Expression
-#     type: "intToInt8# :: Int -> Int8#"
-#     template: ~ARG[0]
-#     workInfo: Never
+- BlackBox:
+    name: Clash.Sized.Internal.Unsigned.fromInteger#
+    kind: Expression
+    template: ~LIT[0] ~ARG[1]
+    workInfo: Never

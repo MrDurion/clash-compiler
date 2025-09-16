@@ -580,6 +580,11 @@ parseBlackBoxE n context =
             n1 <- getExpr 1
             n1E <- convertExprToAigerExpr n1
             pure $ LastRange 0 sz n1E
+          "\"Clash.Sized.Internal.Signed.fromInteger#\"" -> do
+            sz <- getNatLit 0
+            n1 <- getExpr 1
+            n1E <- convertExprToAigerExpr n1
+            pure $ LastRange 0 sz n1E
           _ ->
             error
               ("could not parse blackbox " ++ a ++ "\n with context: " ++ show context)
