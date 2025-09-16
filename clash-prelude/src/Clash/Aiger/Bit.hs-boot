@@ -4,7 +4,6 @@ import Prelude hiding (and, or)
 
 import {-# SOURCE #-} Clash.Sized.Internal.BitVector (Bit, BitVector)
 
--- fromInteger :: Word# -> Integer -> Bit
 pack :: Bit -> BitVector 1
 unpack :: BitVector 1 -> Bit
 (+), (-), (*) :: Bit -> Bit -> Bit

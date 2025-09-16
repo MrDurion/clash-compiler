@@ -17,10 +17,13 @@ aigerSubstitution n = AigerSubstitution n
 
 aigerModuleNames :: [String]
 aigerModuleNames =
-  [ "Clash.Aiger.Bit"
+  [ -- "Clash.Aiger.Base"
+    -- , "Clash.Aiger.Util"
+    "Clash.Aiger.Bit"
   , "Clash.Aiger.BitVector"
   , "Clash.Aiger.Bool"
   , "Clash.Aiger.Unsigned"
   , "Clash.Aiger.Signed"
   , "Clash.Aiger.Int"
+  , "Clash.Aiger.IntHash"
   ]

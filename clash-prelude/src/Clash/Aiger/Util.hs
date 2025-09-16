@@ -89,7 +89,7 @@ maybeDestructBV2 ::
   d
 maybeDestructBV2 f d bv1 bv2 = maybeBV @n f' d
  where
-  f' :: (KnownNat n, 1 <= n) => d
+  f' :: (1 <= n) => d
   f' =
     let
       (bit1, bs1) = destructBV bv1

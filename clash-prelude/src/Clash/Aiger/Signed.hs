@@ -67,8 +67,9 @@ resize (as @(BitVector n) -> bv) = as @(Signed m) $ go bv
   grow :: (n <= m) => BitVector n -> BitVector m
   grow = BV.signExtend @n @(m - n)
 
-truncateB :: forall a b. (KnownNat a, KnownNat b) => Signed(a + b) -> Signed a
-truncateB (as @(BitVector (b + a)) -> bv) = as @(Signed a) $ BV.truncateB bv
+truncateB :: forall n m. (KnownNat n, KnownNat m) => Signed (m + n) -> Signed n
+truncateB (as @(BitVector (m + n)) -> bv) = as @(Signed n) $ BV.truncateB bv
+
 zeroExtend :: forall a b. (KnownNat a, KnownNat b) => Signed a -> Signed (b + a)
 zeroExtend (as @(BitVector a) -> bv) = as @(Signed (b + a)) $ BV.zeroExtend bv
 

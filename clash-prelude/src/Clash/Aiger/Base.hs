@@ -9,6 +9,7 @@ import Clash.Annotations.Primitive (hasBlackBox)
 import Clash.Class.BitPack (BitPack, BitSize)
 import Clash.Sized.Internal.BitVector (Bit, BitVector)
 
+import qualified Clash.Class.BitPack as BitPack
 import qualified Clash.Sized.Internal.BitVector as BitVector (
   Bit (..),
   and##,
@@ -62,6 +63,6 @@ split# = BitVector.split#
 {-# CLASH_OPAQUE as #-}
 as ::
   forall r n.
-  (BitSize n ~ BitSize r) =>
+  (BitPack n, BitPack r, BitSize n ~ BitSize r) =>
   n -> r
-as = undefined
+as = BitPack.bitCoerce

@@ -12,5 +12,5 @@ import Clash.Sized.Internal.BitVector (BitVector)
 type role Unsigned nominal
 
 data Unsigned :: Nat -> Type
-pack# :: Unsigned n -> BitVector n
+pack# :: (KnownNat n) => Unsigned n -> BitVector n
 unpack# :: (KnownNat n) => BitVector n -> Unsigned n

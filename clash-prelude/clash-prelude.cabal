@@ -187,6 +187,7 @@ Library
                       Clash.Aiger.Signed
                       Clash.Aiger.Bool
                       Clash.Aiger.Int
+                      Clash.Aiger.IntHash
 
                       Clash.Annotations.TopEntity
                       Clash.Annotations.Primitive

@@ -254,7 +254,7 @@ unpack# (BV 0 i) =
   in  if n >= m then S (n-2*m) else S n
 unpack# bv = undefError "Signed.unpack" [bv]
 
-instance Eq (Signed n) where
+instance KnownNat n => Eq (Signed n) where
   (==) = eq#
   (/=) = neq#
 
@@ -262,23 +262,23 @@ instance Eq (Signed n) where
 {-# ANN eq# (aigerSubstitution 'AIGER.eq) #-}
 {-# CLASH_OPAQUE eq# #-}
 {-# ANN eq# hasBlackBox #-}
-eq# :: Signed n -> Signed n -> Bool
+eq# :: KnownNat n => Signed n -> Signed n -> Bool
 eq# (S v1) (S v2) = v1 == v2
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
 {-# ANN neq# (aigerSubstitution 'AIGER.neq) #-}
 {-# CLASH_OPAQUE neq# #-}
 {-# ANN neq# hasBlackBox #-}
-neq# :: Signed n -> Signed n -> Bool
+neq# :: KnownNat n => Signed n -> Signed n -> Bool
 neq# (S v1) (S v2) = v1 /= v2
 
-instance Ord (Signed n) where
+instance KnownNat n => Ord (Signed n) where
   (<)  = lt#
   (>=) = ge#
   (>)  = gt#
   (<=) = le#
 
-lt#,ge#,gt#,le# :: Signed n -> Signed n -> Bool
+lt#,ge#,gt#,le# :: KnownNat n => Signed n -> Signed n -> Bool
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
 {-# ANN lt# (aigerSubstitution 'AIGER.lt) #-}
 {-# CLASH_OPAQUE lt# #-}

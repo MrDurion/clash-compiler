@@ -22,13 +22,6 @@ import qualified Clash.Aiger.Util as Util
   , (*) ::
     forall n. (KnownNat n) => BitVector n -> BitVector n -> BitVector n
 negate, abs, signum :: forall n. (KnownNat n) => BitVector n -> BitVector n
-neq
-  , eq
-  , lt
-  , le
-  , gt
-  , ge ::
-    forall n. (KnownNat n) => BitVector n -> BitVector n -> Bool
 minBound, maxBound :: forall n. (KnownNat n) => BitVector n
 and
   , or
@@ -52,8 +45,11 @@ setBit
 -- Undefined
 undefined# :: (KnownNat n) => BitVector n
 -- Resize
-truncateB :: forall a b. (KnownNat a) => BitVector (a + b) -> BitVector a
-zeroExtend, signExtend :: (KnownNat a, KnownNat b) => BitVector a -> BitVector (b + a)
+truncateB ::
+  forall a b. (KnownNat a, KnownNat b) => BitVector (a + b) -> BitVector a
+zeroExtend
+  , signExtend ::
+    (KnownNat a, KnownNat b) => BitVector a -> BitVector (b + a)
 resize :: forall n m. (KnownNat n, KnownNat m) => BitVector n -> BitVector m
 
 -- Implementations
@@ -71,11 +67,12 @@ signExtend bv = (repeatBV (msb bv)) ++# bv
 
 resize b1 = comp @n @m truncate grow b1
  where
+  truncate :: (m <= n) => BitVector n -> BitVector m
   truncate = truncateB @m @(n - m)
   grow :: (n <= m) => BitVector n -> BitVector m
   grow = zeroExtend @n @(m - n)
 
--- Num 
+-- Num
 (+) a b = fst $ adder a b
 (-) a b = a + (negate b)
 (*) a b = shiftAdd b
@@ -128,6 +125,7 @@ halfAdder b1 b2 = (r, c)
   r = b1 `Bit.xor` b2
 
 -- Eq
+neq, eq :: forall n. (KnownNat n) => BitVector n -> BitVector n -> Bool
 neq bv1 bv2 = as @Bool $ Bit.complement $ eq# bv1 bv2
 eq bv1 bv2 = as @Bool $ eq# bv1 bv2
 
@@ -135,9 +133,20 @@ eq# :: (KnownNat n) => BitVector n -> BitVector n -> Bit
 eq# bv1 bv2 = reduceAnd (zipWithBV (Bit.eq#) bv1 bv2)
 
 -- Ord
+lt
+  , le
+  , gt
+  , ge ::
+    forall n. (KnownNat n) => BitVector n -> BitVector n -> Bool
 lt bv1 bv2 = maybeDestructBV2 go False bv1 bv2
  where
-  go b1 b2 bs1 bs2 = if Bit.eq b1 b2 then lt bs1 bs2 else Bit.lt b1 b2
+  go b1 b2 bs1 bs2 =
+    let
+      rest = lt bs1 bs2
+      firstBitEqual = Bit.eq b1 b2
+      firstBitLt = Bit.lt b1 b2
+     in
+      if firstBitEqual then rest else firstBitLt
 le bv1 bv2 = maybeDestructBV2 go True bv1 bv2
  where
   go b1 b2 bs1 bs2 = if Bit.eq b1 b2 then le bs1 bs2 else Bit.lt b1 b2

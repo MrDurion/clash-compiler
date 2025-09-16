@@ -259,7 +259,7 @@ instance KnownNat n => BitPack (Unsigned n) where
 {-# ANN pack# (aigerSubstitution 'AIGER.pack) #-}
 {-# CLASH_OPAQUE pack# #-}
 {-# ANN pack# hasBlackBox #-}
-pack# :: Unsigned n -> BitVector n
+pack# :: KnownNat n => Unsigned n -> BitVector n
 pack# (U i) = BV 0 i
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
@@ -270,7 +270,7 @@ unpack# :: KnownNat n => BitVector n -> Unsigned n
 unpack# (BV 0 i) = U i
 unpack# bv = undefError "Unsigned.unpack" [bv]
 
-instance Eq (Unsigned n) where
+instance KnownNat n => Eq (Unsigned n) where
   (==) = eq#
   (/=) = neq#
 
@@ -278,23 +278,23 @@ instance Eq (Unsigned n) where
 {-# ANN eq# (aigerSubstitution 'AIGER.eq) #-}
 {-# CLASH_OPAQUE eq# #-}
 {-# ANN eq# hasBlackBox #-}
-eq# :: Unsigned n -> Unsigned n -> Bool
+eq# :: KnownNat n => Unsigned n -> Unsigned n -> Bool
 eq# (U v1) (U v2) = v1 == v2
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
 {-# ANN neq# (aigerSubstitution 'AIGER.neq) #-}
 {-# CLASH_OPAQUE neq# #-}
 {-# ANN neq# hasBlackBox #-}
-neq# :: Unsigned n -> Unsigned n -> Bool
+neq# :: KnownNat n => Unsigned n -> Unsigned n -> Bool
 neq# (U v1) (U v2) = v1 /= v2
 
-instance Ord (Unsigned n) where
+instance KnownNat n => Ord (Unsigned n) where
   (<)  = lt#
   (>=) = ge#
   (>)  = gt#
   (<=) = le#
 
-lt#,ge#,gt#,le# :: Unsigned n -> Unsigned n -> Bool
+lt#,ge#,gt#,le# :: KnownNat n => Unsigned n -> Unsigned n -> Bool
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
 {-# ANN lt# (aigerSubstitution 'AIGER.lt) #-}
 {-# CLASH_OPAQUE lt# #-}
@@ -400,7 +400,7 @@ instance KnownNat n => Bounded (Unsigned n) where
   minBound = minBound#
   maxBound = maxBound#
 
-minBound# :: Unsigned n
+minBound# :: forall n. KnownNat n => Unsigned n
 minBound# = U 0
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
 {-# ANN minBound# (aigerSubstitution 'AIGER.minBound) #-}
@@ -761,7 +761,7 @@ zeroExtend# = extend
 {-# ANN resize# (aigerSubstitution 'AIGER.resize) #-}
 {-# CLASH_OPAQUE resize# #-}
 {-# ANN resize# hasBlackBox #-}
-resize# :: forall n m . KnownNat m => Unsigned n -> Unsigned m
+resize# :: forall n m . (KnownNat n, KnownNat m) => Unsigned n -> Unsigned m
 resize# = \(U i) -> if i >= m then U (i `mod` m) else U i
 #if MIN_VERSION_base(4,15,0)
   where m = 1 `naturalShiftL` naturalToWord (natVal (Proxy @m))
@@ -769,7 +769,7 @@ resize# = \(U i) -> if i >= m then U (i `mod` m) else U i
   where m = 1 `shiftL` fromInteger (natVal (Proxy @m))
 #endif
 
-instance Default (Unsigned n) where
+instance KnownNat n => Default (Unsigned n) where
   def = minBound#
 
 instance KnownNat n => Lift (Unsigned n) where

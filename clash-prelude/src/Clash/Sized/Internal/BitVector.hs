@@ -883,7 +883,7 @@ instance KnownNat n => Bounded (BitVector n) where
   minBound = minBound#
   maxBound = maxBound#
 
-minBound# :: BitVector n
+minBound# :: forall n. KnownNat n => BitVector n
 minBound# = BV 0 0
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
 {-# ANN minBound# (aigerSubstitution 'AIGER.minBound) #-}
@@ -1178,7 +1178,7 @@ reduceXor# :: KnownNat n => BitVector n -> Bit
 reduceXor# (BV 0 i) = Bit 0 (fromIntegral (popCount i `mod` 2))
 reduceXor# _ = Bit 1 0
 
-instance Default (BitVector n) where
+instance KnownNat n => Default (BitVector n) where
   def = minBound#
 
 -- * Accessors
