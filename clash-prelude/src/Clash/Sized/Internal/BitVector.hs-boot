@@ -16,7 +16,4 @@ type role BitVector nominal
 data BitVector :: Nat -> Type
 data Bit
 
-high:: Bit
-low :: Bit
-
 undefError :: KnownNat n => String -> [BitVector n] -> a
