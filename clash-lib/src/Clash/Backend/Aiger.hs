@@ -556,20 +556,10 @@ parseBlackBoxE n context =
           "\"Clash.Aiger.Base.as\"" -> do
             id0 <- getExpr 3
             convertExprToAigerExpr id0
-          -- TODO fix these blackboxes:
-          "\"Clash.Sized.Internal.BitVector.toEnum##\"" -> do
-            n1 <- getExpr 1
-            n1E <- convertExprToAigerExpr n1
-            pure $ LastRange 0 1 n1E
           "\"Clash.Sized.Internal.BitVector.fromInteger##\"" -> do
             n1 <- getExpr 1
             n1E <- convertExprToAigerExpr n1
             pure $ LastRange 0 1 n1E
-          "\"Clash.Sized.Internal.BitVector.toEnum#\"" -> do
-            sz <- getNatLit 0
-            n1 <- getExpr 1
-            n1E <- convertExprToAigerExpr n1
-            pure $ LastRange 0 sz n1E
           "\"Clash.Sized.Internal.BitVector.fromInteger#\"" -> do
             sz <- getNatLit 0
             n1 <- getExpr 2

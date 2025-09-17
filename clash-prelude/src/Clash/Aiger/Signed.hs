@@ -21,7 +21,6 @@ import qualified Clash.Aiger.Util as Util
 
 unpack :: forall n. (KnownNat n) => BitVector n -> Signed n
 pack :: forall n. (KnownNat n) => Signed n -> BitVector n
-resize :: forall n m. (KnownNat n, KnownNat m) => Signed n -> Signed m
 (+), (-), (*) :: forall n. (KnownNat n) => Signed n -> Signed n -> Signed n
 negate, abs, signum :: forall n. (KnownNat n) => Signed n -> Signed n
 eq
@@ -58,21 +57,22 @@ pack = as @(BitVector n) @(Signed n)
 undefined# = as @(Signed n) BV.undefined#
 
 -- Resize
+resize :: forall m n. (KnownNat n, KnownNat m) => Signed n -> Signed m
 resize s = comp @n @m (truncate s) (grow s)
  where
-  truncate :: (m <= n) => Signed (m + (n - m)) -> Signed m
-  truncate (as @(BitVector (m + (n - m))) -> bv) = as @(Signed m) final
+  truncate :: (m <= n) => Signed n -> Signed m
+  truncate (as @(BitVector n) -> bv) = as @(Signed m) final
    where
     truncatedBV :: BitVector m
-    truncatedBV = BV.truncateB bv
+    truncatedBV = BV.truncateB @m @(n - m) bv
     signBit = BV.msb bv
     replaceFirstBitWithSignBit _ bs = (as @(BitVector 1) signBit) Base.++# bs
     final = Util.maybeDestructBV replaceFirstBitWithSignBit all0BV truncatedBV
   grow :: (n <= m) => Signed n -> Signed m
   grow = signExtend @n @(m - n)
 
-truncateB :: forall n m. (KnownNat n, KnownNat m) => Signed (m + n) -> Signed n
-truncateB (as @(BitVector (m + n)) -> bv) = as @(Signed n) $ BV.truncateB bv
+truncateB :: forall m n. (KnownNat m, KnownNat n) => Signed (m + n) -> Signed m
+truncateB (as @(BitVector (m + n)) -> bv) = as @(Signed m) $ BV.truncateB bv
 
 zeroExtend :: forall a b. (KnownNat a, KnownNat b) => Signed a -> Signed (b + a)
 zeroExtend (as @(BitVector a) -> bv) = as @(Signed (b + a)) $ BV.zeroExtend bv

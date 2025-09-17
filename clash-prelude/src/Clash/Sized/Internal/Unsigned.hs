@@ -751,11 +751,16 @@ instance KnownNat n => FiniteBits (Unsigned n) where
 instance Resize Unsigned where
   resize     = resize#
   zeroExtend = zeroExtend#
-  truncateB  = resize#
+  truncateB  = truncateB#
 
 zeroExtend# :: forall a b. (KnownNat a, KnownNat b) => Unsigned a -> Unsigned (b + a)
 zeroExtend# = extend
 {-# ANN zeroExtend# (aigerSubstitution 'AIGER.zeroExtend) #-}
+
+truncateB# ::
+  forall a b. (KnownNat a, KnownNat b) => Unsigned (a + b) -> Unsigned a
+truncateB# = resize#
+{-# ANN truncateB# (aigerSubstitution 'AIGER.truncateB) #-}
 
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
 {-# ANN resize# (aigerSubstitution 'AIGER.resize) #-}

@@ -21,6 +21,7 @@ ghcPrimAigerSubstitutions =
   , ('(GHC.Prim.<#), AigerSubstitution ('IntHash.lt#))
   , ('(GHC.Prim.>#), AigerSubstitution ('IntHash.gt#))
   , ('(GHC.Prim.>=#), AigerSubstitution ('IntHash.ge#))
-  , -- , ('(GHC.Prim.<=#), AigerSubstitution ('IntHash.le#))
+  , -- The followingone can not be added yet, since it causes infinite recursion during compilation
+    -- , ('(GHC.Prim.<=#), AigerSubstitution ('IntHash.le#))
     ('GHC.Prim.intToInt16#, AigerSubstitution ('IntHash.intToInt16#))
   ]
