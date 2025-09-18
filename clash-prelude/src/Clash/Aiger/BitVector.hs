@@ -21,8 +21,7 @@ import qualified Clash.Aiger.Util as Util
 undefined# :: (KnownNat n) => BitVector n
 undefined# = repeatBV (Base.undefined##)
 
-
-xToBV :: KnownNat n => BitVector n -> BitVector n
+xToBV :: (KnownNat n) => BitVector n -> BitVector n
 xToBV = id
 
 -- Resize
@@ -58,7 +57,7 @@ resize b1 = comp @n @m truncate grow b1
  where
   shiftAdd ::
     forall m. (KnownNat m) => BitVector m -> BitVector n
-  shiftAdd bv = maybeLDestructBV go def bv
+  shiftAdd bv = maybeRDestructBV go def bv
    where
     go bb c = (shiftlBV Base.low (shiftAdd bb)) + (andA c)
     def = all0BV
@@ -212,7 +211,7 @@ shiftlBV replacementBit bv = maybeDestructBV go all0BV bv
  where
   go _ bs = bs ++# low
   low = as @(BitVector 1) replacementBit
-shiftrBV replacementBit bv = maybeLDestructBV go all0BV bv
+shiftrBV replacementBit bv = maybeRDestructBV go all0BV bv
  where
   go bs _ = low ++# bs
   low = as @(BitVector 1) replacementBit
@@ -223,7 +222,7 @@ rotatelBV
 rotatelBV bv = maybeDestructBV go all0BV bv
  where
   go b bs = bs ++# as @(BitVector 1) b
-rotaterBV bv = maybeLDestructBV go all0BV bv
+rotaterBV bv = maybeRDestructBV go all0BV bv
  where
   go bs b = as @(BitVector 1) b ++# bs
 
@@ -237,6 +236,6 @@ msb, lsb :: (KnownNat n) => BitVector n -> Bit
 msb bv = maybeDestructBV go Base.low bv
  where
   go a _ = a
-lsb bv = maybeLDestructBV go Base.low bv
+lsb bv = maybeRDestructBV go Base.low bv
  where
   go _ a = a

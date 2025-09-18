@@ -65,14 +65,14 @@ maybeDestructBV f d bv = maybeBV @n go d
      in
       f b bs
 
-maybeLDestructBV ::
+maybeRDestructBV ::
   forall n d.
   (KnownNat n) =>
   ((1 <= n) => BitVector (n - 1) -> Bit -> d) ->
   d ->
   BitVector n ->
   d
-maybeLDestructBV f d bv = maybeBV @(n) f' d
+maybeRDestructBV f d bv = maybeBV @(n) f' d
  where
   f' :: ((1 <= n) => d)
   f' = f bs b
@@ -106,14 +106,14 @@ replaceBit :: (KnownNat n) => BitVector n -> Int -> (Bit -> Bit) -> BitVector n
 replaceBit bv index bit =
   if
     | index Prelude.< 0 -> bv
-    | index Prelude.== 0 -> maybeLDestructBV replaceNow bv bv
-    | otherwise -> maybeLDestructBV go bv bv
+    | index Prelude.== 0 -> maybeRDestructBV replaceNow bv bv
+    | otherwise -> maybeRDestructBV go bv bv
  where
   go bvb b = (replaceBit bvb (index - 1) bit) Base.++# (as @(BitVector 1) b)
   replaceNow bvb b = bvb Base.++# (as @(BitVector 1) $ bit b)
 
 getIndexBV :: (KnownNat n) => BitVector n -> Int -> Bit
-getIndexBV bv i = maybeLDestructBV go Base.undefined## bv
+getIndexBV bv i = maybeRDestructBV go Base.undefined## bv
  where
   go bvb b =
     if
@@ -143,7 +143,7 @@ foldrBV f d bv = maybeDestructBV go d bv
   go b bs = f b (foldrBV f d bs)
 
 foldlBV :: forall n b. (KnownNat n) => (Bit -> b -> b) -> b -> BitVector n -> b
-foldlBV f d bv = maybeLDestructBV go d bv
+foldlBV f d bv = maybeRDestructBV go d bv
  where
   go bs b = f b (foldrBV f d bs)
 
