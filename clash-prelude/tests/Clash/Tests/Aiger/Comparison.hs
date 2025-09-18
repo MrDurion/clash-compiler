@@ -4,7 +4,7 @@
 {-# OPTIONS_GHC -fplugin=GHC.TypeLits.KnownNat.Solver #-}
 {-# OPTIONS_GHC -fplugin=GHC.TypeLits.Normalise #-}
 
-module Clash.Tests.Aiger.BitVector (tests, main) where
+module Clash.Tests.Aiger.Comparison (tests, main) where
 
 import Data.Bits (Bits (..))
 import Data.Data (Proxy (Proxy))
@@ -16,7 +16,7 @@ import Clash.Class.Resize (Resize (..))
 import Clash.Sized.Internal.BitVector (Bit, BitVector)
 import Clash.Sized.Internal.Signed (Signed)
 import Clash.Sized.Internal.Unsigned (Unsigned)
-import Clash.Tests.Aiger.TH
+import Clash.Tests.Aiger.EqualTests
 
 import qualified Clash.Aiger.Bit as AIGER_BIT
 import qualified Clash.Aiger.BitVector as AIGER
@@ -27,16 +27,16 @@ tests :: TestTree
 tests =
   testGroup "Aiger comparison tests" $
     [ testGroup "Bit" $ bitTests
-    , testGroup "Unsigned 0" $ unsignedTestsWithNas @0
-    , testGroup "Unsigned 1" $ unsignedTestsWithNas @1
-    , testGroup "Unsigned 2" $ unsignedTestsWithNas @2
-    , testGroup "Unsigned 4" $ unsignedTestsWithNas @4
-    , testGroup "Unsigned 16" $ unsignedTestsWithNas @16
     , testGroup "BitVector 0" $ bitvectorTestsWithNas @0
     , testGroup "BitVector 1" $ bitvectorTestsWithNas @1
     , testGroup "BitVector 2" $ bitvectorTestsWithNas @2
     , testGroup "BitVector 4" $ bitvectorTestsWithNas @4
     , testGroup "BitVector 16" $ bitvectorTestsWithNas @16
+    , testGroup "Unsigned 0" $ unsignedTestsWithNas @0
+    , testGroup "Unsigned 1" $ unsignedTestsWithNas @1
+    , testGroup "Unsigned 2" $ unsignedTestsWithNas @2
+    , testGroup "Unsigned 4" $ unsignedTestsWithNas @4
+    , testGroup "Unsigned 16" $ unsignedTestsWithNas @16
     , testGroup "Signed 0" $ signedTestsWithNas @0
     , testGroup "Signed 1" $ signedTestsWithNas @1
     , testGroup "Signed 2" $ signedTestsWithNas @2
@@ -63,12 +63,15 @@ bitTests =
   , eqTest "Bit bitSizeMaybe" AIGER_BIT.bitSizeMaybe (bitSizeMaybe @(Bit))
   , eqTest "Bit isSigned" AIGER_BIT.isSigned (isSigned @(Bit))
   , eqTest "Bit zeroBits" AIGER_BIT.zeroBits (zeroBits @(Bit))
-  , -- , eqTest "Bit bit" AIGER_BIT.bit (bit @(Bit))
-    -- , eqTest "Bit setBit" AIGER_BIT.setBit (setBit @(Bit))
-    -- , eqTest "Bit clearBit" AIGER_BIT.clearBit (clearBit @(Bit))
-    -- , eqTest "Bit complementBit" AIGER_BIT.complementBit (complementBit @(Bit))
-    -- , eqTest "Bit testBit" AIGER_BIT.testBit (testBit @(Bit))
-    eqTest "Bit shift" AIGER_BIT.shift (shift @(Bit))
+  , eqTestBoundedInt @1 "Bit bit" AIGER_BIT.bit (bit @(Bit))
+  , eqTestBoundedInt @1 "Bit setBit" AIGER_BIT.setBit (setBit @(Bit))
+  , eqTestBoundedInt @1 "Bit clearBit" AIGER_BIT.clearBit (clearBit @(Bit))
+  , eqTestBoundedInt @1
+      "Bit complementBit"
+      AIGER_BIT.complementBit
+      (complementBit @(Bit))
+  , eqTestBoundedInt @1 "Bit testBit" AIGER_BIT.testBit (testBit @(Bit))
+  , eqTest "Bit shift" AIGER_BIT.shift (shift @(Bit))
   , eqTest "Bit shiftL" AIGER_BIT.shiftL (shiftL @(Bit))
   , eqTest "Bit shiftR" AIGER_BIT.shiftR (shiftR @(Bit))
   , eqTest "Bit rotate" AIGER_BIT.rotate (rotate @(Bit))
@@ -148,27 +151,7 @@ bitvectorTestsWithNas =
       (show (natVal (Proxy @n)) ++ " BitVector zeroBits")
       AIGER.zeroBits
       (zeroBits @(BitVector n))
-  , -- , eqTest
-    --     (show (natVal (Proxy @n)) ++ " BitVector bit")
-    --     AIGER.bit
-    --     (bit @(BitVector n))
-    -- , eqTest
-    --     (show (natVal (Proxy @n)) ++ " BitVector setBit")
-    --     AIGER.setBit
-    --     (setBit @(BitVector n))
-    -- , eqTest
-    --     (show (natVal (Proxy @n)) ++ " BitVector clearBit")
-    --     AIGER.clearBit
-    --     (clearBit @(BitVector n))
-    -- , eqTest
-    --     (show (natVal (Proxy @n)) ++ " BitVector complementBit")
-    --     AIGER.complementBit
-    --     (complementBit @(BitVector n))
-    -- , eqTest
-    --     (show (natVal (Proxy @n)) ++ " BitVector testBit")
-    --     AIGER.testBit
-    --     (testBit @(BitVector n))
-    eqTest
+  , eqTest
       (show (natVal (Proxy @n)) ++ " BitVector shiftL")
       AIGER.shiftL
       (shiftL @(BitVector n))
@@ -176,14 +159,6 @@ bitvectorTestsWithNas =
       (show (natVal (Proxy @n)) ++ " BitVector shiftR")
       AIGER.shiftR
       (shiftR @(BitVector n))
-  , eqTest
-      (show (natVal (Proxy @n)) ++ " BitVector rotateL")
-      AIGER.rotateL
-      (rotateL @(BitVector n))
-  , eqTest
-      (show (natVal (Proxy @n)) ++ " BitVector rotateR")
-      AIGER.rotateR
-      (rotateR @(BitVector n))
   , eqTest
       (show (natVal (Proxy @n)) ++ " BitVector popCount")
       AIGER.popCount
@@ -279,6 +254,38 @@ bitvectorTestsWithNas =
   , eqTest (show (natVal (Proxy @n)) ++ " BitVector msb") (AIGER.msb @n) (msb)
   , eqTest (show (natVal (Proxy @n)) ++ " BitVector lsb") (AIGER.lsb @n) (lsb)
   ]
+    ++ if natVal (Proxy @n) == 0
+      then []
+      else
+        [ eqTestBoundedInt @n
+            (show (natVal (Proxy @n)) ++ " BitVector bit")
+            AIGER.bit
+            (bit @(BitVector n))
+        , eqTestBoundedInt @n
+            (show (natVal (Proxy @n)) ++ " BitVector setBit")
+            AIGER.setBit
+            (setBit @(BitVector n))
+        , eqTestBoundedInt @n
+            (show (natVal (Proxy @n)) ++ " BitVector clearBit")
+            AIGER.clearBit
+            (clearBit @(BitVector n))
+        , eqTestBoundedInt @n
+            (show (natVal (Proxy @n)) ++ " BitVector complementBit")
+            AIGER.complementBit
+            (complementBit @(BitVector n))
+        , eqTestBoundedInt @n
+            (show (natVal (Proxy @n)) ++ " BitVector testBit")
+            AIGER.testBit
+            (testBit @(BitVector n))
+        , eqTest
+            (show (natVal (Proxy @n)) ++ " BitVector rotateL")
+            AIGER.rotateL
+            (rotateL @(BitVector n))
+        , eqTest
+            (show (natVal (Proxy @n)) ++ " BitVector rotateR")
+            AIGER.rotateR
+            (rotateR @(BitVector n))
+        ]
 
 unsignedTestsWithNas :: forall n. (KnownNat n) => [TestTree]
 unsignedTestsWithNas =
@@ -341,27 +348,7 @@ unsignedTestsWithNas =
       (show (natVal (Proxy @n)) ++ " Unsigned zeroBits")
       AIGER_U.zeroBits
       (zeroBits @(Unsigned n))
-  , -- , eqTest
-    --     (show (natVal (Proxy @n)) ++ " Unsigned bit")
-    --     AIGER_U.bit
-    --     (bit @(Unsigned n))
-    -- , eqTest
-    --     (show (natVal (Proxy @n)) ++ " Unsigned setBit")
-    --     AIGER_U.setBit
-    --     (setBit @(Unsigned n))
-    -- , eqTest
-    --     (show (natVal (Proxy @n)) ++ " Unsigned clearBit")
-    --     AIGER_U.clearBit
-    --     (clearBit @(Unsigned n))
-    -- , eqTest
-    --     (show (natVal (Proxy @n)) ++ " Unsigned complementBit")
-    --     AIGER_U.complementBit
-    --     (complementBit @(Unsigned n))
-    -- , eqTest
-    --     (show (natVal (Proxy @n)) ++ " Unsigned testBit")
-    --     AIGER_U.testBit
-    --     (testBit @(Unsigned n))
-    eqTest
+  , eqTest
       (show (natVal (Proxy @n)) ++ " Unsigned shiftL")
       AIGER_U.shiftL
       (shiftL @(Unsigned n))
@@ -369,14 +356,6 @@ unsignedTestsWithNas =
       (show (natVal (Proxy @n)) ++ " Unsigned shiftR")
       AIGER_U.shiftR
       (shiftR @(Unsigned n))
-  , eqTest
-      (show (natVal (Proxy @n)) ++ " Unsigned rotateL")
-      AIGER_U.rotateL
-      (rotateL @(Unsigned n))
-  , eqTest
-      (show (natVal (Proxy @n)) ++ " Unsigned rotateR")
-      AIGER_U.rotateR
-      (rotateR @(Unsigned n))
   , eqTest
       (show (natVal (Proxy @n)) ++ " Unsigned popCount")
       AIGER_U.popCount
@@ -457,6 +436,38 @@ unsignedTestsWithNas =
       (AIGER_U.resize @(n + 4) @n)
       resize
   ]
+    ++ if natVal (Proxy @n) == 0
+      then []
+      else
+        [ eqTestBoundedInt @n
+            (show (natVal (Proxy @n)) ++ " Unsigned bit")
+            AIGER_U.bit
+            (bit @(Unsigned n))
+        , eqTestBoundedInt @n
+            (show (natVal (Proxy @n)) ++ " Unsigned setBit")
+            AIGER_U.setBit
+            (setBit @(Unsigned n))
+        , eqTestBoundedInt @n
+            (show (natVal (Proxy @n)) ++ " Unsigned clearBit")
+            AIGER_U.clearBit
+            (clearBit @(Unsigned n))
+        , eqTestBoundedInt @n
+            (show (natVal (Proxy @n)) ++ " Unsigned complementBit")
+            AIGER_U.complementBit
+            (complementBit @(Unsigned n))
+        , eqTestBoundedInt @n
+            (show (natVal (Proxy @n)) ++ " Unsigned testBit")
+            AIGER_U.testBit
+            (testBit @(Unsigned n))
+        , eqTest
+            (show (natVal (Proxy @n)) ++ " Unsigned rotateL")
+            AIGER_U.rotateL
+            (rotateL @(Unsigned n))
+        , eqTest
+            (show (natVal (Proxy @n)) ++ " Unsigned rotateR")
+            AIGER_U.rotateR
+            (rotateR @(Unsigned n))
+        ]
 
 signedTestsWithNas :: forall n. (KnownNat n) => [TestTree]
 signedTestsWithNas =
@@ -470,17 +481,35 @@ signedTestsWithNas =
       (AIGER_S.eq)
       ((==) @(Signed n))
   , -- Ord
-    eqTest (show (natVal (Proxy @n)) ++ " Signed lt") AIGER_S.lt ((<) @(Signed n))
-  , eqTest (show (natVal (Proxy @n)) ++ " Signed le") AIGER_S.le ((<=) @(Signed n))
-  , eqTest (show (natVal (Proxy @n)) ++ " Signed gt") AIGER_S.gt ((>) @(Signed n))
-  , eqTest (show (natVal (Proxy @n)) ++ " Signed ge") AIGER_S.ge ((>=) @(Signed n))
+    eqTest
+      (show (natVal (Proxy @n)) ++ " Signed lt")
+      AIGER_S.lt
+      ((<) @(Signed n))
+  , eqTest
+      (show (natVal (Proxy @n)) ++ " Signed le")
+      AIGER_S.le
+      ((<=) @(Signed n))
+  , eqTest
+      (show (natVal (Proxy @n)) ++ " Signed gt")
+      AIGER_S.gt
+      ((>) @(Signed n))
+  , eqTest
+      (show (natVal (Proxy @n)) ++ " Signed ge")
+      AIGER_S.ge
+      ((>=) @(Signed n))
   , -- Bit
     eqTest
       (show (natVal (Proxy @n)) ++ " Signed and")
       AIGER_S.and
       ((.&.) @(Signed n))
-  , eqTest (show (natVal (Proxy @n)) ++ " Signed or") AIGER_S.or ((.|.) @(Signed n))
-  , eqTest (show (natVal (Proxy @n)) ++ " Signed xor") AIGER_S.xor (xor @(Signed n))
+  , eqTest
+      (show (natVal (Proxy @n)) ++ " Signed or")
+      AIGER_S.or
+      ((.|.) @(Signed n))
+  , eqTest
+      (show (natVal (Proxy @n)) ++ " Signed xor")
+      AIGER_S.xor
+      (xor @(Signed n))
   , eqTest
       (show (natVal (Proxy @n)) ++ " Signed complement")
       AIGER_S.complement
@@ -501,24 +530,7 @@ signedTestsWithNas =
       (show (natVal (Proxy @n)) ++ " Signed zeroBits")
       AIGER_S.zeroBits
       (zeroBits @(Signed n))
-  , -- , eqTest (show (natVal (Proxy @n)) ++ " Signed bit") AIGER_S.bit (bit @(Signed n))
-    -- , eqTest
-    --     (show (natVal (Proxy @n)) ++ " Signed setBit")
-    --     AIGER_S.setBit
-    --     (setBit @(Signed n))
-    -- , eqTest
-    --     (show (natVal (Proxy @n)) ++ " Signed clearBit")
-    --     AIGER_S.clearBit
-    --     (clearBit @(Signed n))
-    -- , eqTest
-    --     (show (natVal (Proxy @n)) ++ " Signed complementBit")
-    --     AIGER_S.complementBit
-    --     (complementBit @(Signed n))
-    -- , eqTest
-    --     (show (natVal (Proxy @n)) ++ " Signed testBit")
-    --     AIGER_S.testBit
-    --     (testBit @(Signed n))
-    eqTest
+  , eqTest
       (show (natVal (Proxy @n)) ++ " Signed shiftL")
       AIGER_S.shiftL
       (shiftL @(Signed n))
@@ -527,26 +539,30 @@ signedTestsWithNas =
       AIGER_S.shiftR
       (shiftR @(Signed n))
   , eqTest
-      (show (natVal (Proxy @n)) ++ " Signed rotateL")
-      AIGER_S.rotateL
-      (rotateL @(Signed n))
-  , eqTest
-      (show (natVal (Proxy @n)) ++ " Signed rotateR")
-      AIGER_S.rotateR
-      (rotateR @(Signed n))
-  , eqTest
       (show (natVal (Proxy @n)) ++ " Signed popCount")
       AIGER_S.popCount
       (popCount @(Signed n))
   , -- Num
-    eqTest (show (natVal (Proxy @n)) ++ " Signed +") (AIGER_S.+) ((+) @(Signed n))
-  , eqTest (show (natVal (Proxy @n)) ++ " Signed -") (AIGER_S.-) ((-) @(Signed n))
-  , eqTest (show (natVal (Proxy @n)) ++ " Signed *") (AIGER_S.*) ((*) @(Signed n))
+    eqTest
+      (show (natVal (Proxy @n)) ++ " Signed +")
+      (AIGER_S.+)
+      ((+) @(Signed n))
+  , eqTest
+      (show (natVal (Proxy @n)) ++ " Signed -")
+      (AIGER_S.-)
+      ((-) @(Signed n))
+  , eqTest
+      (show (natVal (Proxy @n)) ++ " Signed *")
+      (AIGER_S.*)
+      ((*) @(Signed n))
   , eqTest
       (show (natVal (Proxy @n)) ++ " Signed negate")
       AIGER_S.negate
       (negate @(Signed n))
-  , eqTest (show (natVal (Proxy @n)) ++ " Signed abs") AIGER_S.abs (abs @(Signed n))
+  , eqTest
+      (show (natVal (Proxy @n)) ++ " Signed abs")
+      AIGER_S.abs
+      (abs @(Signed n))
   , eqTest
       (show (natVal (Proxy @n)) ++ " Signed signum")
       AIGER_S.signum
@@ -594,6 +610,38 @@ signedTestsWithNas =
       (AIGER_S.resize @(n + 4) @n)
       resize
   ]
+    ++ if natVal (Proxy @n) == 0
+      then []
+      else
+        [ eqTestBoundedInt @n
+            (show (natVal (Proxy @n)) ++ " Signed bit")
+            AIGER_S.bit
+            (bit @(Signed n))
+        , eqTestBoundedInt @n
+            (show (natVal (Proxy @n)) ++ " Signed setBit")
+            AIGER_S.setBit
+            (setBit @(Signed n))
+        , eqTestBoundedInt @n
+            (show (natVal (Proxy @n)) ++ " Signed clearBit")
+            AIGER_S.clearBit
+            (clearBit @(Signed n))
+        , eqTestBoundedInt @n
+            (show (natVal (Proxy @n)) ++ " Signed complementBit")
+            AIGER_S.complementBit
+            (complementBit @(Signed n))
+        , eqTestBoundedInt @n
+            (show (natVal (Proxy @n)) ++ " Signed testBit")
+            AIGER_S.testBit
+            (testBit @(Signed n))
+        , eqTest
+            (show (natVal (Proxy @n)) ++ " Signed rotateL")
+            AIGER_S.rotateL
+            (rotateL @(Signed n))
+        , eqTest
+            (show (natVal (Proxy @n)) ++ " Signed rotateR")
+            AIGER_S.rotateR
+            (rotateR @(Signed n))
+        ]
 
 main :: IO ()
 main = defaultMain tests

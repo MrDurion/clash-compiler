@@ -29,7 +29,7 @@ import qualified Clash.Tests.XException
 import qualified Clash.Tests.Laws.Enum
 import qualified Clash.Tests.Laws.SaturatingNum
 
-import qualified Clash.Tests.Aiger.BitVector
+import qualified Clash.Tests.Aiger.Comparison
 
 tests :: TestTree
 tests = testGroup "Unittests"
@@ -60,7 +60,7 @@ tests = testGroup "Unittests"
     [ Clash.Tests.Laws.Enum.tests
     , Clash.Tests.Laws.SaturatingNum.tests
     ]
-  , Clash.Tests.Aiger.BitVector.tests
+  , Clash.Tests.Aiger.Comparison.tests
   ]
 
 main :: IO ()

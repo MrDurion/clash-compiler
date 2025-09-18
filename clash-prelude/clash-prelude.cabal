@@ -474,8 +474,8 @@ test-suite unittests
                  Clash.Tests.Laws.Enum
                  Clash.Tests.Laws.SaturatingNum
 
-                 Clash.Tests.Aiger.BitVector
-                 Clash.Tests.Aiger.TH
+                 Clash.Tests.Aiger.Comparison
+                 Clash.Tests.Aiger.EqualTests
 
                  Hedgehog.Extra
 
