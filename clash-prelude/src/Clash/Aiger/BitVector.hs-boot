@@ -12,6 +12,7 @@ eq
   , gt
   , ge ::
     (KnownNat n) => BitVector n -> BitVector n -> Bool
+xToBV :: KnownNat n => BitVector n -> BitVector n
 minBound, maxBound :: (KnownNat n) => BitVector n
 (+)
   , (-)

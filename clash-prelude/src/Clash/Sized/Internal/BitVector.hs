@@ -1804,5 +1804,6 @@ xToBV x =
   unsafeDupablePerformIO (catch (evaluate x)
                                 (\(XException _) -> return undefined#))
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
+{-# ANN xToBV (aigerSubstitution 'AIGER.xToBV) #-}
 {-# CLASH_OPAQUE xToBV #-}
 {-# ANN xToBV hasBlackBox #-}

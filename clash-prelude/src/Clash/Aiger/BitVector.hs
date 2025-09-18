@@ -18,11 +18,12 @@ import qualified Clash.Aiger.Bit as Bit
 import qualified Clash.Aiger.Util as Util
 
 -- Undefined
--- Resize
--- Implementations
--- Undefined
 undefined# :: (KnownNat n) => BitVector n
 undefined# = repeatBV (Base.undefined##)
+
+
+xToBV :: KnownNat n => BitVector n -> BitVector n
+xToBV = id
 
 -- Resize
 truncateB ::
