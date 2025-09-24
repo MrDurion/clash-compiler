@@ -102,25 +102,6 @@ mapBV f bv = maybeDestructBV go bv bv
  where
   go b bs = as @(BitVector 1) (f b) Base.++# mapBV f bs
 
-replaceBit :: (KnownNat n) => BitVector n -> Int -> (Bit -> Bit) -> BitVector n
-replaceBit bv index bit =
-  if
-    | index Prelude.< 0 -> bv
-    | index Prelude.== 0 -> maybeRDestructBV replaceNow bv bv
-    | otherwise -> maybeRDestructBV go bv bv
- where
-  go bvb b = (replaceBit bvb (index - 1) bit) Base.++# (as @(BitVector 1) b)
-  replaceNow bvb b = bvb Base.++# (as @(BitVector 1) $ bit b)
-
-getIndexBV :: (KnownNat n) => BitVector n -> Int -> Bit
-getIndexBV bv i = maybeRDestructBV go Base.undefined## bv
- where
-  go bvb b =
-    if
-      | i Prelude.< 0 -> Base.undefined##
-      | i Prelude.== 0 -> b
-      | otherwise -> getIndexBV bvb (i - 1)
-
 repeatBV :: forall n. (KnownNat n) => Bit -> BitVector n
 repeatBV f = mapBV (\_ -> f) 0
 

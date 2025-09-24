@@ -7,7 +7,6 @@ module Clash.Aiger.BitVector where
 import GHC.TypeLits (KnownNat, type (+), type (-), type (<=))
 import Prelude hiding (negate, truncate, (*), (+), (-))
 
-import qualified Prelude
 
 import Clash.Aiger.Base (as, (++#))
 import Clash.Aiger.Util
@@ -15,7 +14,7 @@ import Clash.Sized.Internal.BitVector (Bit, BitVector)
 
 import qualified Clash.Aiger.Base as Base
 import qualified Clash.Aiger.Bit as Bit
-import qualified Clash.Aiger.Util as Util
+import {-# SOURCE #-} qualified Clash.Aiger.Int as INT
 
 -- Undefined
 undefined# :: (KnownNat n) => BitVector n
@@ -120,13 +119,7 @@ lt
     forall n. (KnownNat n) => BitVector n -> BitVector n -> Bool
 lt bv1 bv2 = maybeDestructBV2 go False bv1 bv2
  where
-  go b1 b2 bs1 bs2 =
-    let
-      rest = lt bs1 bs2
-      firstBitEqual = Bit.eq b1 b2
-      firstBitLt = Bit.lt b1 b2
-     in
-      if firstBitEqual then rest else firstBitLt
+  go b1 b2 bs1 bs2 = if Bit.eq b1 b2 then lt bs1 bs2 else Bit.lt b1 b2
 le bv1 bv2 = maybeDestructBV2 go True bv1 bv2
  where
   go b1 b2 bs1 bs2 = if Bit.eq b1 b2 then le bs1 bs2 else Bit.lt b1 b2
@@ -168,53 +161,73 @@ or = zipWithBV Bit.or
 xor = zipWithBV Bit.xor
 
 zeroBits = all0BV
-bit i = Util.replaceBit all0BV i (const Base.high)
-setBit bv i = Util.replaceBit bv i (const Base.high)
-clearBit bv i = Util.replaceBit bv i (const Base.low)
-complementBit bv i = Util.replaceBit bv i (\bt -> Bit.complement bt)
+bit i = replaceBit all0BV i (const Base.high)
+setBit bv i = replaceBit bv i (const Base.high)
+clearBit bv i = replaceBit bv i (const Base.low)
+complementBit bv i = replaceBit bv i (\bt -> Bit.complement bt)
 testBit bv i = (getIndexBV bv i) `Bit.eq` Base.high
 bitSizeMaybe bv = Just (bitSize bv)
 bitSize bv = foldrBV go 0 bv
  where
   go :: a -> Int -> Int
-  go _ (i :: Int) = i Prelude.+ 1
+  go _ (i :: Int) = i INT.+ 1
 isSigned _ = False
 popCount bv = foldrBV go 0 bv
  where
-  go b i = if Bit.eq b Base.high then i Prelude.+ 1 else i
+  go b i = if Bit.eq b Base.high then i INT.+ 1 else i
+
+replaceBit :: (KnownNat n) => BitVector n -> Int -> (Bit -> Bit) -> BitVector n
+replaceBit bv index bitFunction =
+  if
+    | index `INT.lt` 0 -> bv
+    | index `INT.eq` 0 -> maybeRDestructBV replaceCurrentBit bv bv
+    | otherwise -> maybeRDestructBV recurseOneFurther bv bv
+ where
+  recurseOneFurther bvb b =
+    (replaceBit bvb (index INT.- 1) bitFunction) Base.++# (as @(BitVector 1) b)
+  replaceCurrentBit bvb b = bvb Base.++# (as @(BitVector 1) replacementBit)
+   where
+    replacementBit = bitFunction b
+
+getIndexBV :: (KnownNat n) => BitVector n -> Int -> Bit
+getIndexBV bv i = maybeRDestructBV go Base.undefined## bv
+ where
+  go bvb b =
+    if
+      | i `INT.lt` 0 -> Base.undefined##
+      | i `INT.eq` 0 -> b
+      | otherwise -> getIndexBV bvb (i INT.- 1)
 
 shiftL bv i =
   if
-    | i < 0 -> undefined#
-    | i == 0 -> bv
-    | otherwise -> shiftL (shiftlBV Base.low bv) (i Prelude.- 1)
+    | i `INT.lt` 0 -> undefined#
+    | i `INT.eq` 0 -> bv
+    | otherwise -> shiftL (shiftlBV Base.low bv) (i INT.- 1)
 shiftR bv i =
   if
-    | i < 0 -> undefined#
-    | i == 0 -> bv
-    | otherwise -> shiftR (shiftrBV Base.low bv) (i Prelude.- 1)
+    | i `INT.lt` 0 -> undefined#
+    | i `INT.eq` 0 -> bv
+    | otherwise -> shiftR (shiftrBV Base.low bv) (i INT.- 1)
 rotateL bv i =
   if
-    | i < 0 -> undefined#
-    | i == 0 -> bv
-    | otherwise -> rotateL (rotatelBV bv) (i Prelude.- 1)
+    | i `INT.lt` 0 -> undefined#
+    | i `INT.eq` 0 -> bv
+    | otherwise -> rotateL (rotatelBV bv) (i INT.- 1)
 rotateR bv i =
   if
-    | i < 0 -> undefined#
-    | i == 0 -> bv
-    | otherwise -> rotateR (rotaterBV bv) (i Prelude.- 1)
+    | i `INT.lt` 0 -> undefined#
+    | i `INT.eq` 0 -> bv
+    | otherwise -> rotateR (rotaterBV bv) (i INT.- 1)
 
 shiftlBV
   , shiftrBV ::
     forall n. (KnownNat n) => Bit -> BitVector n -> BitVector n
 shiftlBV replacementBit bv = maybeDestructBV go all0BV bv
  where
-  go _ bs = bs ++# low
-  low = as @(BitVector 1) replacementBit
+  go _ bs = bs ++# as @(BitVector 1) replacementBit
 shiftrBV replacementBit bv = maybeRDestructBV go all0BV bv
  where
-  go bs _ = low ++# bs
-  low = as @(BitVector 1) replacementBit
+  go bs _ = as @(BitVector 1) replacementBit ++# bs
 
 rotatelBV
   , rotaterBV ::
@@ -227,6 +240,7 @@ rotaterBV bv = maybeRDestructBV go all0BV bv
   go bs b = as @(BitVector 1) b ++# bs
 
 -- Extra
+
 reduceAnd, reduceOr, reduceXor :: (KnownNat n) => BitVector n -> Bit
 reduceAnd bv = foldrBV Bit.and Base.high bv
 reduceOr bv = foldrBV Bit.or Base.low bv
