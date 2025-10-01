@@ -28,7 +28,6 @@ topEntity clk rst xy = r
   where
     r = exposeClockResetEnable mac clk rst xy
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# CLASH_OPAQUE topEntity #-}
 
 testBench :: Signal System Bool
 testBench = done

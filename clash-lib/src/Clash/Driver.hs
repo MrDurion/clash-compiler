@@ -1007,7 +1007,7 @@ writeHDL dir (cname, hdl) = do
     layout = LayoutOptions (AvailablePerLine 120 0.4)
     rendered0 = renderLazy (layoutPretty layout hdl)
     rendered1 = Text.unlines (map Text.stripEnd (Text.lines rendered0))
-  writeAndHash (dir </> cname) (Text.encodeUtf8 (rendered1 <> "\n"))
+  writeAndHash (dir </> cname) (Text.encodeUtf8 (rendered1))
 
 -- | Copy given files
 writeMemoryDataFiles

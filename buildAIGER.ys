@@ -1,0 +1,8 @@
+read_verilog verilog/Wire.topEntity/topEntity.v
+flatten
+synth
+clk2fflogic
+simplemap
+aigmap
+hierarchy -check -top topEntity
+write_aiger -symbols circuit.aig

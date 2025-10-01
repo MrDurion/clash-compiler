@@ -38,7 +38,11 @@ cradle:
     # when loading ./clash-prelude/src/Clash/Sized/Internal/Mod.hs transitively
     # as a dependency of another module
     - path: "./clash-prelude"
-      config: { cradle: {none: }}
+      config: { cradle: {cabal: [
+                                {path: "./clash-prelude/src", component: "lib:clash-prelude"}
+                                # ,{path: "./clash-prelude/tests", component: "clash-prelude:unittests"}
+                                ]}}
+      # config: { cradle: {none: }}
     - path: "./clash-term"
       config: { cradle: {cabal: {component: "exe:clash-term"}}}
     # Skip examples for now
