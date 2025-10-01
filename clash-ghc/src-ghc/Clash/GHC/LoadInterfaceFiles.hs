@@ -114,7 +114,7 @@ import           Clash.Annotations.Primitive
 import           Clash.Annotations.BitRepresentation (DataReprAnn)
 import           Clash.Debug                         (traceIf)
 import           Clash.Primitives.Types              (UnresolvedPrimitive, name)
-import           Clash.Primitives.Util               (decodeOrErrJson, decodeOrErrYaml, mapAigerSubToGhcName)
+import           Clash.Primitives.Util               (decodeOrErrJson, decodeOrErrYaml)
 import           Clash.GHC.GHC2Core                  (qualifiedNameString')
 import           Clash.Util                          (curLoc)
 import qualified Clash.Util.Interpolate              as I

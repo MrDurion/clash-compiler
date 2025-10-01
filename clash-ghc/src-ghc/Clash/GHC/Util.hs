@@ -16,7 +16,7 @@ import GHC.Utils.Outputable (SDoc, neverQualify)
 import GHC.Utils.Error (mkErrorMsgEnvelope, mkPlainError)
 import GHC.Plugins
   (DynFlags, SourceError, ($$), blankLine, empty, isGoodSrcSpan, liftIO,
-   noSrcSpan, text, throwOneError)
+   noSrcSpan, text, throwOneError, thNameToGhcNameIO, hsc_NC)
 import GHC.Types.Error (mkSimpleUnknownDiagnostic)
 #elif MIN_VERSION_ghc(9,6,0)
 import GHC.Driver.Errors.Types (GhcMessage(GhcUnknownMessage))
@@ -55,7 +55,7 @@ import Outputable         (Outputable, SDoc, showPpr, showSDoc)
 import ErrUtils           (mkPlainErrMsg)
 import GhcPlugins         (DynFlags, SourceError, ($$), blankLine, empty, isGoodSrcSpan, liftIO, noSrcSpan, text, throwOneError)
 #endif
-import GHC                (GhcMonad(..), printException)
+import GHC                (GhcMonad(..), printException, Name)
 
 import Control.Exception  (Exception(..), ErrorCall(..))
 import GHC.Exception      (SomeException)
@@ -64,6 +64,9 @@ import System.Exit        (ExitCode(ExitFailure), exitWith)
 import Clash.Util         (ClashException(..))
 import Clash.Util.Interpolate (i)
 import Clash.Driver.Types (ClashOpts(..))
+
+import Clash.Annotations.AigerSubstitution (AigerSubstitution (..))
+import qualified Language.Haskell.TH as TH
 
 -- | Like 'lines', but returning a horizontally spaced SDoc instead of a list:
 --
@@ -155,3 +158,22 @@ showPprUnsafe = showPpr unsafeGlobalDynFlags
 showSDocUnsafe :: SDoc -> String
 showSDocUnsafe = showSDoc unsafeGlobalDynFlags
 #endif
+
+type AigerSubstitutionMap = [(Name, Name)]
+
+generateAigerSubstitutionMap :: (GHC.GhcMonad m) => [(Name, AigerSubstitution)] -> m AigerSubstitutionMap
+generateAigerSubstitutionMap x = mapM toAigerMap x
+ where 
+  toAigerMap (cb:: Name, as) = do
+    (cb,) <$> mapAigerSubToGhcName as
+
+thn2ghcn :: GHC.GhcMonad m => TH.Name -> m Name
+thn2ghcn thn = do
+    hsc_env <- GHC.getSession
+    mname <- liftIO $ thNameToGhcNameIO (hsc_NC hsc_env) thn
+    case mname of
+      Just name -> pure name
+      Nothing -> liftIO $ fail $ "Could not find reference to " ++ show thn
+
+mapAigerSubToGhcName :: GHC.GhcMonad m => AigerSubstitution -> m Name
+mapAigerSubToGhcName (AigerSubstitution as) = thn2ghcn as

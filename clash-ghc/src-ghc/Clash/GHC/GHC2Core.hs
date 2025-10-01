@@ -198,7 +198,6 @@ import qualified Clash.Core.Var              as C
 import qualified Clash.Data.UniqMap          as C
 import           Clash.Normalize.Primitives  as C
 import           Clash.Primitives.Types      hiding (name)
-import           Clash.Primitives.Util       (AigerSubstitutionMap)
 import           Clash.Unique                (fromGhcUnique)
 import           Clash.Util
 import           Clash.GHC.Util

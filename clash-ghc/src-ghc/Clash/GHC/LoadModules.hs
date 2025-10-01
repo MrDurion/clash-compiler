@@ -206,7 +206,7 @@ import           Clash.Annotations.BitRepresentation.Internal
 
 import           Clash.Signal.Internal
 import Clash.Annotations.AigerSubstitution (AigerSubstitution(..))
-import Clash.Primitives.Util (generateAigerSubstitutionMap, thn2ghcn, AigerSubstitutionMap)
+import Clash.GHC.Util (generateAigerSubstitutionMap, thn2ghcn, AigerSubstitutionMap)
 
 import qualified Clash.Aiger.Prim as AIGER_PRIM
 
@@ -655,7 +655,6 @@ loadModules startAction useColor hdl modName dflagsM idirs = do
       AIGER -> (findAigerSubstitutionAnnotations allBinderIds) 
       _ -> pure []
     let aigerSubs = annAigerSubs ++ ghcPrimSubs
-    --TODO
     let allBinderIdsWithoutSubstitution = filter (\a -> not $ elem (Name.getName a) $ fst $ unzip aigerSubs) allBinderIds
     primGuards <- findPrimitiveGuardAnnotations allBinderIdsWithoutSubstitution
     aigerSubstitutes <- generateAigerSubstitutionMap aigerSubs

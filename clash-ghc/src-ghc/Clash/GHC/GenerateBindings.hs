@@ -94,11 +94,12 @@ import           Clash.GHC.GHC2Core
   (C2C, GHC2CoreState, GHC2CoreEnv (..), tyConMap, coreToId, coreToName, coreToTerm,
    makeAllTyCons, qualifiedNameString, emptyGHC2CoreState, srcSpan)
 import           Clash.GHC.LoadModules   (ghcLibDir, loadModules)
+import           Clash.GHC.Util          (AigerSubstitutionMap)
 import           Clash.Netlist.BlackBox.Util (getUsedArguments)
 import           Clash.Netlist.Types     (TopEntityT(..))
 import           Clash.Primitives.Types
   (Primitive (..), CompiledPrimMap)
-import           Clash.Primitives.Util   (generatePrimMap, AigerSubstitutionMap)
+import           Clash.Primitives.Util   (generatePrimMap)
 import           Clash.Unique            (Unique)
 import           Clash.Util              (reportTimeDiff)
 import qualified Clash.Util.Interpolate as I

@@ -16,10 +16,6 @@
 
 module Clash.Primitives.Util
   ( generatePrimMap
-  , mapAigerSubToGhcName
-  , generateAigerSubstitutionMap
-  , thn2ghcn
-  , AigerSubstitutionMap
   , hashCompiledPrimMap
   , constantArgs
   , decodeOrErrJson
@@ -61,13 +57,6 @@ import           Clash.Netlist.BlackBox.Util
   (walkElement)
 import           Clash.Netlist.BlackBox.Types
   (Element(Const, Lit), BlackBoxMeta(..))
---FIXME alignment and placing
-import Clash.Annotations.AigerSubstitution (AigerSubstitution (..))
-import GHC.Plugins (thNameToGhcNameIO, hsc_NC)
-import qualified GHC
-import GHC.Types.Name (Name)
-import Control.Monad.IO.Class (liftIO)
-import qualified Language.Haskell.TH as TH
 
 hashCompiledPrimitive :: CompiledPrimitive -> Int
 hashCompiledPrimitive (Primitive {name, primSort}) = hash (name, primSort)
@@ -167,26 +156,6 @@ addGuards = foldl go
           HasBlackBox (ws1 ++ ws2) p
       )
       primMap
-
-type AigerSubstitutionMap = [(Name, Name)]
-
---FIXME
-generateAigerSubstitutionMap :: (GHC.GhcMonad m) => [(Name, AigerSubstitution)] -> m AigerSubstitutionMap
-generateAigerSubstitutionMap x = mapM toAigerMap x
- where 
-  toAigerMap (cb:: Name, as) = do
-    (cb,) <$> mapAigerSubToGhcName as
-
-thn2ghcn :: GHC.GhcMonad m => TH.Name -> m Name
-thn2ghcn thn = do
-    hsc_env <- GHC.getSession
-    mname <- liftIO $ thNameToGhcNameIO (hsc_NC hsc_env) thn
-    case mname of
-      Just name -> pure name
-      Nothing -> liftIO $ fail $ "Could not find reference to " ++ show thn
-
-mapAigerSubToGhcName :: GHC.GhcMonad m => AigerSubstitution -> m Name
-mapAigerSubToGhcName (AigerSubstitution as) = thn2ghcn as
 
 -- | Generate a set of primitives that are found in the primitive definition
 -- files in the given directories.
