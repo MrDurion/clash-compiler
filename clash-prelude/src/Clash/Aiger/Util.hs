@@ -127,8 +127,3 @@ foldlBV :: forall n b. (KnownNat n) => (Bit -> b -> b) -> b -> BitVector n -> b
 foldlBV f d bv = maybeRDestructBV go d bv
  where
   go bs b = f b (foldrBV f d bs)
-
-flipFirstBit :: (KnownNat n) => BitVector n -> BitVector n
-flipFirstBit bv = maybeDestructBV des bv bv
- where
-  des b bs = (as @(BitVector 1) (Base.complement b)) Base.++# bs

@@ -1,11 +1,12 @@
 module Clash.Aiger.IntHash where
 
+import GHC.Base (Int (I#), Int#, Int16#)
+import GHC.Int (Int16 (I16#))
+
 import Clash.Aiger.Base (as)
+import Clash.Sized.Internal.Signed (Signed)
 
 import qualified Clash.Aiger.Int as Int
-import GHC.Int (Int16 (I16#))
-import GHC.Base (Int16#, Int#, Int (I#))
-import Clash.Sized.Internal.Signed (Signed)
 import qualified Clash.Aiger.Signed as S
 
 -- Util
@@ -15,14 +16,11 @@ asInt i = I# i
 asInt# :: Int -> Int#
 asInt# ii = case ii of (I# i) -> i
 
-asInt16# :: Int16 -> Int16#
-asInt16# i16 = case i16 of (I16# i16#) -> i16#
-
 -- Num
 (+#), (-#), (*#) :: Int# -> Int# -> Int#
-(+#) (asInt -> i1) (asInt -> i2) = asInt# $ (Int.+) i1 i2
-(-#) (asInt -> i1) (asInt -> i2) = asInt# $ (Int.-) i1 i2
-(*#) (asInt -> i1) (asInt -> i2) = asInt# $ (Int.*) i1 i2
+(+#) (asInt -> i1) (asInt -> i2) = asInt# $ i1 Int.+ i2
+(-#) (asInt -> i1) (asInt -> i2) = asInt# $ i1 Int.- i2
+(*#) (asInt -> i1) (asInt -> i2) = asInt# $ i1 Int.* i2
 
 -- Eq and Ord
 eq#
@@ -47,3 +45,6 @@ intToInt16# (asInt -> i) =
     int16 = as @(Int16) signed16
    in
     asInt16# $ int16
+ where
+  asInt16# :: Int16 -> Int16#
+  asInt16# i16 = case i16 of (I16# i16#) -> i16#

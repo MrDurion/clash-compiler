@@ -16,7 +16,7 @@ resize :: forall n m. (KnownNat n, KnownNat m) => Unsigned n -> Unsigned m
 zeroExtend ::
   forall a b. (KnownNat a, KnownNat b) => Unsigned a -> Unsigned (b + a)
 truncateB ::
-  forall a b. (KnownNat a, KnownNat b) => Unsigned (a + b) -> Unsigned a
+  forall a b. (KnownNat a, KnownNat b) => Unsigned (b + a) -> Unsigned a
 and, or, xor :: (KnownNat n) => Unsigned n -> Unsigned n -> Unsigned n
 complement :: (KnownNat n) => Unsigned n -> Unsigned n
 zeroBits :: (KnownNat n) => Unsigned n

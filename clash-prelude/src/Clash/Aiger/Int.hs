@@ -7,15 +7,7 @@ import Clash.Sized.Internal.Signed (Signed)
 
 import qualified Clash.Aiger.Signed as S
 
--- Util
-asSigned :: Int -> Signed 64
-asSigned i = as @(Signed 64) i
-
-fromSigned :: Signed 64 -> Int
-fromSigned s = as @(Int) s
-
--- Int
-
+-- Eq and Ord
 eq
   , neq
   , lt
@@ -23,65 +15,70 @@ eq
   , gt
   , ge ::
     Int -> Int -> Bool
-(+), (-), (*) :: Int -> Int -> Int
-negate, abs, signum :: Int -> Int
-undefined# :: Int
-minBound, maxBound :: Int
-and, or, xor :: Int -> Int -> Int
-complement :: Int -> Int
-zeroBits :: Int
-bit :: Int -> Int
-testBit :: Int -> Int -> Bool
-bitSizeMaybe :: Int -> Maybe Int
-bitSize, popCount :: Int -> Int
-isSigned :: Int -> Bool
-setBit
-  , clearBit
-  , complementBit
-  , shiftL
-  , shiftR
-  , rotateL
-  , rotateR ::
-    Int -> Int -> Int
--- Eq and Ord
-eq (asSigned -> s1) (asSigned -> s2) = S.eq s1 s2
-neq (asSigned -> s1) (asSigned -> s2) = S.neq s1 s2
-lt (asSigned -> s1) (asSigned -> s2) = S.lt s1 s2
-le (asSigned -> s1) (asSigned -> s2) = S.le s1 s2
-gt (asSigned -> s1) (asSigned -> s2) = S.gt s1 s2
-ge (asSigned -> s1) (asSigned -> s2) = S.ge s1 s2
+eq (as @(Signed 64) -> s1) (as @(Signed 64) -> s2) = S.eq s1 s2
+neq (as @(Signed 64) -> s1) (as @(Signed 64) -> s2) = S.neq s1 s2
+lt (as @(Signed 64) -> s1) (as @(Signed 64) -> s2) = S.lt s1 s2
+le (as @(Signed 64) -> s1) (as @(Signed 64) -> s2) = S.le s1 s2
+gt (as @(Signed 64) -> s1) (as @(Signed 64) -> s2) = S.gt s1 s2
+ge (as @(Signed 64) -> s1) (as @(Signed 64) -> s2) = S.ge s1 s2
 
 -- Num
-(+) (asSigned -> s1) (asSigned -> s2) = fromSigned $ s1 S.+ s2
-(-) (asSigned -> s1) (asSigned -> s2) = fromSigned $ s1 S.- s2
-(*) (asSigned -> s1) (asSigned -> s2) = fromSigned $ s1 S.* s2
-negate (asSigned -> s) = fromSigned $ S.negate s
-abs (asSigned -> s) = fromSigned $ S.abs s
-signum (asSigned -> s) = fromSigned $ S.signum s
+(+), (-), (*) :: Int -> Int -> Int
+(+) (as @(Signed 64) -> s1) (as @(Signed 64) -> s2) = as @Int $ s1 S.+ s2
+(-) (as @(Signed 64) -> s1) (as @(Signed 64) -> s2) = as @Int $ s1 S.- s2
+(*) (as @(Signed 64) -> s1) (as @(Signed 64) -> s2) = as @Int $ s1 S.* s2
+
+negate, abs, signum :: Int -> Int
+negate (as @(Signed 64) -> s) = as @Int $ S.negate s
+abs (as @(Signed 64) -> s) = as @Int $ S.abs s
+signum (as @(Signed 64) -> s) = as @Int $ S.signum s
 
 -- Undefined
-undefined# = fromSigned S.undefined#
+undefined# :: Int
+undefined# = as @Int S.undefined#
 
 -- Bounded
-minBound = fromSigned $ S.minBound
-maxBound = fromSigned $ S.maxBound
+minBound, maxBound :: Int
+minBound = as @Int $ S.minBound
+maxBound = as @Int $ S.maxBound
 
 -- Bits
-and (asSigned -> s1) (asSigned -> s2) = fromSigned $ S.and s1 s2
-or (asSigned -> s1) (asSigned -> s2) = fromSigned $ S.or s1 s2
-xor (asSigned -> s1) (asSigned -> s2) = fromSigned $ S.xor s1 s2
-complement (asSigned -> s) = fromSigned $ S.complement s
-zeroBits = fromSigned $ S.zeroBits
-bit i = fromSigned $ S.bit i
-testBit (asSigned -> s) i = S.testBit s i
-setBit (asSigned -> s) i = fromSigned $ S.setBit s i
-clearBit (asSigned -> s) i = fromSigned $ S.clearBit s i
-complementBit (asSigned -> s) i = fromSigned $ S.complementBit s i
-isSigned (asSigned -> s) = S.isSigned s
-bitSizeMaybe (asSigned -> s) = S.bitSizeMaybe s
-bitSize (asSigned -> s) = S.bitSize s
-popCount (asSigned -> s) = S.popCount s
-shiftL (asSigned -> s) i = fromSigned $ S.shiftL s i
-shiftR (asSigned -> s) i = fromSigned $ S.shiftL s i
-rotateL (asSigned -> s) i = fromSigned $ S.rotateL s i
-rotateR (asSigned -> s) i = fromSigned $ S.rotateR s i
+and, or, xor :: Int -> Int -> Int
+and (as @(Signed 64) -> s1) (as @(Signed 64) -> s2) = as @Int $ S.and s1 s2
+or (as @(Signed 64) -> s1) (as @(Signed 64) -> s2) = as @Int $ S.or s1 s2
+xor (as @(Signed 64) -> s1) (as @(Signed 64) -> s2) = as @Int $ S.xor s1 s2
+
+complement :: Int -> Int
+complement (as @(Signed 64) -> s) = as @Int $ S.complement s
+
+zeroBits :: Int
+zeroBits = as @Int $ S.zeroBits
+
+bit :: Int -> Int
+bit i = as @Int $ S.bit i
+
+testBit :: Int -> Int -> Bool
+testBit (as @(Signed 64) -> s) i = S.testBit s i
+
+setBit, clearBit, complementBit :: Int -> Int -> Int
+setBit (as @(Signed 64) -> s) i = as @Int $ S.setBit s i
+clearBit (as @(Signed 64) -> s) i = as @Int $ S.clearBit s i
+complementBit (as @(Signed 64) -> s) i = as @Int $ S.complementBit s i
+
+isSigned :: Int -> Bool
+isSigned (as @(Signed 64) -> s) = S.isSigned s
+
+bitSizeMaybe :: Int -> Maybe Int
+bitSizeMaybe (as @(Signed 64) -> s) = S.bitSizeMaybe s
+
+bitSize :: Int -> Int
+bitSize (as @(Signed 64) -> s) = S.bitSize s
+
+popCount :: Int -> Int
+popCount (as @(Signed 64) -> s) = S.popCount s
+
+shiftL, shiftR, rotateL, rotateR :: Int -> Int -> Int
+shiftL (as @(Signed 64) -> s) i = as @Int $ S.shiftL s i
+shiftR (as @(Signed 64) -> s) i = as @Int $ S.shiftL s i
+rotateL (as @(Signed 64) -> s) i = as @Int $ S.rotateL s i
+rotateR (as @(Signed 64) -> s) i = as @Int $ S.rotateR s i

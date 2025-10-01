@@ -12,7 +12,7 @@ eq
   , gt
   , ge ::
     (KnownNat n) => BitVector n -> BitVector n -> Bool
-xToBV :: KnownNat n => BitVector n -> BitVector n
+xToBV :: (KnownNat n) => BitVector n -> BitVector n
 minBound, maxBound :: (KnownNat n) => BitVector n
 (+)
   , (-)
@@ -42,7 +42,7 @@ setBit
   , rotateR ::
     (KnownNat n) => BitVector n -> Int -> BitVector n
 truncateB ::
-  forall a b. (KnownNat a, KnownNat b) => BitVector (a + b) -> BitVector a
+  forall a b. (KnownNat a, KnownNat b) => BitVector (b + a) -> BitVector a
 zeroExtend
   , signExtend ::
     (KnownNat a, KnownNat b) => BitVector a -> BitVector (b + a)

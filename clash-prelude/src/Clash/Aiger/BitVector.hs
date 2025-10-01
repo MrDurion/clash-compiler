@@ -7,7 +7,6 @@ module Clash.Aiger.BitVector where
 import GHC.TypeLits (KnownNat, type (+), type (-), type (<=))
 import Prelude hiding (negate, truncate, (*), (+), (-))
 
-
 import Clash.Aiger.Base (as, (++#))
 import Clash.Aiger.Util
 import Clash.Sized.Internal.BitVector (Bit, BitVector)
@@ -25,7 +24,7 @@ xToBV = id
 
 -- Resize
 truncateB ::
-  forall a b. (KnownNat a, KnownNat b) => BitVector (a + b) -> BitVector a
+  forall a b. (KnownNat a, KnownNat b) => BitVector (b + a) -> BitVector a
 truncateB bv = b
  where
   (_, b) = Base.split# bv
@@ -54,30 +53,17 @@ resize b1 = comp @n @m truncate grow b1
 (-) a b = a + (negate b)
 (*) a b = shiftAdd b
  where
-  shiftAdd ::
-    forall m. (KnownNat m) => BitVector m -> BitVector n
+  shiftAdd :: forall m. (KnownNat m) => BitVector m -> BitVector n
   shiftAdd bv = maybeRDestructBV go def bv
    where
-    go bb c = (shiftlBV Base.low (shiftAdd bb)) + (andA c)
+    go bb c = (shiftlBV Base.low (shiftAdd bb)) + (multiplyWithA c)
     def = all0BV
-  andA i = mapBV (`Bit.and` i) a
+  multiplyWithA i = mapBV (Bit.* i) a
 
 negate, abs, signum :: forall n. (KnownNat n) => BitVector n -> BitVector n
-negate bv = fst $ negateBV bv
 abs = id
-signum bv = if ((reduceOr bv) `Bit.eq` Base.low) then 0 else 1
-
--- Util
-
-negateBV :: forall n. (KnownNat n) => BitVector n -> (BitVector n, Bit)
-negateBV bv = maybeDestructBV go (all0BV, Base.high) bv
- where
-  go b bs =
-    let
-      (r, c) = negateBV bs
-      (bitr, bitc) = halfAdder (Bit.complement b) c
-     in
-      ((as @(BitVector 1) bitr) Base.++# r, bitc)
+signum bv = if (bv `eq` 0) then 0 else 1
+negate bv = (complement bv) + 1
 
 adder ::
   forall n. (KnownNat n) => BitVector n -> BitVector n -> (BitVector n, Bit)
