@@ -78,10 +78,6 @@ toInt (AigerIndex i b) = (i * 2) + if b then 1 else 0
 complement :: AigerIndex -> AigerIndex
 complement (AigerIndex i b) = AigerIndex i (not b)
 
--- TODO what to do with undefined.
-undefinedBit :: AigerIndex
-undefinedBit = AigerIndex 0 False
-
 instance Show AigerIndex where
   show ai = show $ toInt ai
 
@@ -123,10 +119,6 @@ data AigerState = AigerState
   , _aigerExpressions :: Map.Map AigerPointer AigerExpr
   }
 
--- ##################
--- ### STATE MODS ###
--- ##################
-
 makeLenses ''AigerState
 
 instance HasIdentifierSet AigerState where
@@ -136,6 +128,78 @@ instance HasUsageMap AigerState where
   usageMap = undefined
 
 type AigerM = Ap (State AigerState)
+
+getOutputNodes :: AigerM [OutputNode]
+getOutputNodes = do
+  Ap $ use outputNodes
+
+getInputNodes :: AigerM [InputNode]
+getInputNodes = do
+  Ap $ use inputNodes
+
+getAndNodes :: AigerM [AndNode]
+getAndNodes = do
+  Ap $ use andNodes
+
+addInputNode :: InputNode -> AigerM ()
+addInputNode inpN = do
+  ins <- getInputNodes
+  Ap $ inputNodes .= inpN : ins
+
+addOutputNode :: OutputNode -> AigerM ()
+addOutputNode outN = do
+  outs <- getOutputNodes
+  Ap $ outputNodes .= outN : outs
+
+addAndNode :: AndNode -> AigerM ()
+addAndNode aN = do
+  ans <- getAndNodes
+  Ap $ andNodes .= aN : ans
+
+getUnsolvedAndNodes :: AigerM [UnsolvedAndNode]
+getUnsolvedAndNodes = do
+  Ap $ use unsolvedAndNodes
+
+addUnsolvedAndNodes :: UnsolvedAndNode -> AigerM ()
+addUnsolvedAndNodes n = do
+  ns <- getUnsolvedAndNodes
+  Ap $ unsolvedAndNodes .= n : ns
+
+getMaxIndex :: AigerM Int
+getMaxIndex = Ap $ use maxIndex
+
+getNumInputs :: AigerM Int
+getNumInputs = do
+  Ap $ length <$> (use inputNodes)
+
+getNumOutputs :: AigerM Int
+getNumOutputs = do
+  Ap $ length <$> (use outputNodes)
+
+getNumAndGates :: AigerM Int
+getNumAndGates = do
+  Ap $ length <$> (use andNodes)
+
+getNewIndex :: AigerM AigerIndex
+getNewIndex = do
+  i <- getMaxIndex
+  Ap $ maxIndex += 1
+  pure (AigerIndex i False)
+
+getAssignments :: AigerM (Map.Map AigerPointer AigerExpr)
+getAssignments = do
+  Ap $ use aigerExpressions
+
+addAssignment :: AigerPointer -> AigerExpr -> AigerM ()
+addAssignment ap aa = do
+  assignm <- getAssignments
+  let newass = Map.insert ap aa assignm
+  Ap $ aigerExpressions .= newass
+  pure ()
+
+-- ##################
+-- ### STATE MODS ###
+-- ##################
 
 instance Backend AigerState where
   -- \| Initial state for state monad
@@ -333,83 +397,23 @@ instance Backend AigerState where
   setDomainConfigurations :: DomainMap -> AigerState -> AigerState
   setDomainConfigurations _ a = a
 
-getOutputNodes :: AigerM [OutputNode]
-getOutputNodes = do
-  Ap $ use outputNodes
-getInputNodes :: AigerM [InputNode]
-getInputNodes = do
-  Ap $ use inputNodes
-getAndNodes :: AigerM [AndNode]
-getAndNodes = do
-  Ap $ use andNodes
-addInputNode :: InputNode -> AigerM ()
-addInputNode inpN = do
-  ins <- getInputNodes
-  Ap $ inputNodes .= inpN : ins
-addOutputNode :: OutputNode -> AigerM ()
-addOutputNode outN = do
-  outs <- getOutputNodes
-  Ap $ outputNodes .= outN : outs
-
-addAndNode :: AndNode -> AigerM ()
-addAndNode aN = do
-  ans <- getAndNodes
-  Ap $ andNodes .= aN : ans
-
-getUnsolvedAndNodes :: AigerM [UnsolvedAndNode]
-getUnsolvedAndNodes = do
-  Ap $ use unsolvedAndNodes
-
-addUnsolvedAndNodes :: UnsolvedAndNode -> AigerM ()
-addUnsolvedAndNodes n = do
-  ns <- getUnsolvedAndNodes
-  Ap $ unsolvedAndNodes .= n : ns
-
-getMaxIndex :: AigerM Int
-getMaxIndex = Ap $ use maxIndex
-
-getNumInputs :: AigerM Int
-getNumInputs = do
-  Ap $ length <$> (use inputNodes)
-
-getNumOutputs :: AigerM Int
-getNumOutputs = do
-  Ap $ length <$> (use outputNodes)
-
-getNumAndGates :: AigerM Int
-getNumAndGates = do
-  Ap $ length <$> (use andNodes)
-
-getNewIndex :: AigerM AigerIndex
-getNewIndex = do
-  i <- getMaxIndex
-  Ap $ maxIndex += 1
-  pure (AigerIndex i False)
-
-getAssignments :: AigerM (Map.Map AigerPointer AigerExpr)
-getAssignments = do
-  Ap $ use aigerExpressions
-
-addAssignment :: AigerPointer -> AigerExpr -> AigerM ()
-addAssignment ap aa = do
-  assignm <- getAssignments
-  let newass = Map.insert ap aa assignm
-  Ap $ aigerExpressions .= newass
-  pure ()
-
 getAigerExpr :: AigerPointer -> AigerM AigerExpr
 getAigerExpr ap = do
   assignm <- getAssignments
-  let mae = Map.lookup ap assignm
-  let ae =
-        mae
-          `orElse` error
-            ( "could not find aigerExprression "
-                ++ show ap
-                ++ " in \n"
-                ++ (unlines $ map show $ Map.assocs assignm)
-            )
-  pure ae
+  pure $
+    Map.lookup ap assignm
+      `orElse` error
+        ( "could not find aigerExprression "
+            ++ show ap
+            ++ " in \n"
+            ++ (unlines $ map show $ Map.assocs assignm)
+        )
+
+undefinedBit :: AigerM AigerIndex
+undefinedBit = do
+  i <- getNewIndex
+  addInputNode (InputNode i)
+  pure i
 
 getIndeces :: AigerExpr -> AigerM [AigerIndex]
 getIndeces expr =
@@ -444,7 +448,7 @@ convertExprToAigerExpr :: Expr -> AigerM AigerExpr
 convertExprToAigerExpr e = case e of
   (Identifier eI Nothing) -> pure $ Id (Pointer (toText eI))
   (Identifier eI (Just a)) -> pure $ modifier (Pointer (toText eI)) a
-  (Literal mhwt l) -> pure $ parseLiteral (fst <$> mhwt) l
+  (Literal mhwt l) -> parseLiteral (fst <$> mhwt) l
   (DataCon hwt _ ex) -> parseDataConE hwt ex
   (DataTag _ _) -> error ("TODO found " ++ show e)
   (BlackBoxE n _ _ _ _ templateContext _) -> parseBlackBoxE n templateContext
@@ -453,24 +457,24 @@ convertExprToAigerExpr e = case e of
   (IfThenElse _ _ _) -> error ("TODO found " ++ show e)
   (Noop) -> pure Empty
 
-parseLiteral :: Maybe (HWType) -> Literal -> AigerExpr
+parseLiteral :: Maybe (HWType) -> Literal -> AigerM AigerExpr
 parseLiteral Nothing (NumLit i) = error ("Num Literal without HWType found: " ++ show i)
 parseLiteral (Just hwt) (NumLit i) = case hwt of
-  Unsigned n -> BitRange $ makeUnsigned i n
-  Signed n -> BitRange $ makeSigned i n
+  Unsigned n -> pure $ BitRange $ makeUnsigned i n
+  Signed n -> pure $ BitRange $ makeSigned i n
   _ ->
     error ("Can not parse num literal with HWType " ++ show hwt)
-parseLiteral _ (BitLit b) =
-  BitRange
-    [ ( case b of
-          H -> AigerIndex 0 True
-          L -> AigerIndex 0 False
-          _ -> undefinedBit
-      )
-    ]
-parseLiteral _ (BoolLit b) = BitRange [AigerIndex 0 b]
+parseLiteral _ (BitLit b) = do
+  bit <-
+    ( case b of
+        H -> pure $ AigerIndex 0 True
+        L -> pure $ AigerIndex 0 False
+        _ -> undefinedBit
+    )
+  pure $ BitRange [bit]
+parseLiteral _ (BoolLit b) = pure $ BitRange [AigerIndex 0 b]
 parseLiteral _ (BitVecLit i1 i2) = error ("TODO bitVec literal found: " ++ show i1 ++ " " ++ show i2) -- BitRange $ makeUnsigned i2 i1 -- TODO what does the two integers mean??
-parseLiteral _ (VecLit ls) = Concat $ map (parseLiteral Nothing) ls -- TODO what about HWType pass on?
+parseLiteral _ (VecLit ls) = Concat <$> mapM (parseLiteral Nothing) ls -- TODO what about HWType pass on?
 parseLiteral _ (StringLit s) = error ("TODO String literal found: " ++ s)
 
 makeUnsigned :: Integer -> Size -> [AigerIndex]
@@ -525,7 +529,8 @@ parseBlackBoxE n context =
   let a = show (bbName context)
    in ( case a of
           "\"Clash.Aiger.Base.undefined##\"" -> do
-            pure $ BitRange [undefinedBit]
+            ub <- undefinedBit
+            pure $ BitRange [ub]
           "\"Clash.Aiger.Base.high\"" -> do
             pure $ BitRange [(AigerIndex 0 True)]
           "\"Clash.Aiger.Base.low\"" -> do
@@ -575,6 +580,9 @@ parseBlackBoxE n context =
             n1 <- getExpr 1
             n1E <- convertExprToAigerExpr n1
             pure $ LastRange 0 sz n1E
+          "\"Clash.XException.errorX\"" -> do
+            ub <- mapM (\_ -> undefinedBit) [0 .. resultSize - 1]
+            pure $ BitRange ub
           _ ->
             error
               ("could not parse blackbox " ++ a ++ "\n with context: " ++ show context)
@@ -587,6 +595,11 @@ parseBlackBoxE n context =
     pure $
       (^. _1)
         (a `orElse` (error $ "could not find index " ++ show i ++ " in " ++ show context))
+
+  resultSize :: Int
+  resultSize = do
+    let a = snd $ unzip $ bbResults context
+    sum $ map typeSize a
 
   getNatLit :: Int -> AigerM Int
   getNatLit i = do
@@ -647,9 +660,9 @@ parseDeclaration d = do
       (Maybe Literal, Expr) -> AigerM (Maybe AigerExpr, AigerExpr)
     armsToAigerExpr (ml, e) = do
       expr <- convertExprToAigerExpr e
-      let a = case ml of
-            Nothing -> Nothing
-            Just lit -> Just $ parseLiteral (Just (compType)) lit
+      a <- case ml of
+        Nothing -> pure Nothing
+        Just lit -> Just <$> parseLiteral (Just (compType)) lit
       pure (a, expr)
 
     reduceConcat ::
