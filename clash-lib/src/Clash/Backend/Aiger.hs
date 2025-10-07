@@ -457,13 +457,37 @@ convertExprToAigerExpr e = case e of
   (IfThenElse _ _ _) -> error ("TODO found " ++ show e)
   (Noop) -> pure Empty
 
+-- ################
+-- ### LITERALS ###
+-- ################
+
 parseLiteral :: Maybe (HWType) -> Literal -> AigerM AigerExpr
+-- Number literal
 parseLiteral Nothing (NumLit i) = error ("Num Literal without HWType found: " ++ show i)
 parseLiteral (Just hwt) (NumLit i) = case hwt of
   Unsigned n -> pure $ BitRange $ makeUnsigned i n
   Signed n -> pure $ BitRange $ makeSigned i n
   _ ->
     error ("Can not parse num literal with HWType " ++ show hwt)
+ where
+  makeUnsigned :: Integer -> Size -> [AigerIndex]
+  makeUnsigned ii n =
+    map
+      (\a -> AigerIndex 0 $ not $ divBy2 (div ii (2 ^ a)))
+      (reverse [0 .. (n - 1)])
+  makeSigned :: Integer -> Size -> [AigerIndex]
+  makeSigned ii n =
+    let signed = ii < 0
+        unsignedVersion = makeUnsigned (abs ii) n
+     in if signed
+          then unsignedVersion
+          else [AigerIndex 0 signed] ++ makeUnsigned ((2 ^ n) + ii) (n - 1)
+  divBy2 :: (Integral a) => a -> Bool
+  divBy2 n = case n `mod` 2 of
+    0 -> True
+    _ -> False
+
+-- Bit literal
 parseLiteral _ (BitLit b) = do
   bit <-
     ( case b of
@@ -472,62 +496,51 @@ parseLiteral _ (BitLit b) = do
         _ -> undefinedBit
     )
   pure $ BitRange [bit]
+-- Bool literal
 parseLiteral _ (BoolLit b) = pure $ BitRange [AigerIndex 0 b]
-parseLiteral _ (BitVecLit i1 i2) = error ("TODO bitVec literal found: " ++ show i1 ++ " " ++ show i2) -- BitRange $ makeUnsigned i2 i1 -- TODO what does the two integers mean??
-parseLiteral _ (VecLit ls) = Concat <$> mapM (parseLiteral Nothing) ls -- TODO what about HWType pass on?
+-- Vector literal
+parseLiteral _ (VecLit ls) = Concat <$> mapM (parseLiteral Nothing) ls
+-- Unsupported
+parseLiteral _ (BitVecLit i1 i2) = error ("TODO bitVec literal found: " ++ show i1 ++ " " ++ show i2)
 parseLiteral _ (StringLit s) = error ("TODO String literal found: " ++ s)
 
-makeUnsigned :: Integer -> Size -> [AigerIndex]
-makeUnsigned ii n =
-  map
-    (\a -> AigerIndex 0 $ not $ divBy2 (div ii (2 ^ a)))
-    (reverse [0 .. (n - 1)])
-makeSigned :: Integer -> Size -> [AigerIndex]
-makeSigned ii n =
-  let signed = ii < 0
-      unsignedVersion = makeUnsigned (abs ii) n
-   in if signed
-        then unsignedVersion
-        else [AigerIndex 0 signed] ++ makeUnsigned ((2 ^ n) + ii) (n - 1)
-
-divBy2 :: (Integral a) => a -> Bool
-divBy2 n = case n `mod` 2 of
-  0 -> True
-  _ -> False
-
+-- get items from tuples and lists
 modifier :: AigerPointer -> Modifier -> AigerExpr
 modifier (Id -> pointer) m = case m of
-  Indexed (Product _ _ hwts, _, ft) -> Range start end pointer
-   where
-    frontHWT = take (ft) hwts
-    frontSize = sum $ map typeSize frontHWT
-    currentHWT = hwts !! ft
-    currentSize = typeSize currentHWT
-    start = frontSize
-    end = start + currentSize
   Sliced (_, s, end) -> Range s end pointer
-  -- TODO other modifiers
+  Indexed (Product _ _ listOfHWT, _, field) -> Range start end pointer
+   where
+    frontHWT = take (field) listOfHWT
+    frontSize = sum $ map typeSize frontHWT
+    start = frontSize
+    currentHWT = listOfHWT !! field
+    currentSize = typeSize currentHWT
+    end = start + currentSize
   _ -> pointer
 
+-- Data constructors
 parseDataConE :: HWType -> [Expr] -> AigerM AigerExpr
 parseDataConE h es = do
   case h of
     Product{} -> do
       aes <- mapM convertExprToAigerExpr es
       pure $ Concat aes
+    -- Unsigned _ -> do
+    --   aes <- mapM convertExprToAigerExpr es
+    --   pure $ Concat aes
+    -- Signed _ -> do
+    --   aes <- mapM convertExprToAigerExpr es
+    --   pure $ Concat aes
     Bit -> case es of
       [e] -> convertExprToAigerExpr e
       _ -> error "Multiple expressions in Bit DataCon"
-    Signed _ -> do
-      -- TODO what about different size than expressions?
-      aes <- mapM convertExprToAigerExpr es
-      pure $ Concat aes
     l -> error ("no parser implemented yet for DataCon " ++ show l)
 
 parseBlackBoxE :: Text -> BlackBoxContext -> AigerM AigerExpr
 parseBlackBoxE n context =
   let a = show (bbName context)
    in ( case a of
+          -- Base module
           "\"Clash.Aiger.Base.undefined##\"" -> do
             ub <- undefinedBit
             pure $ BitRange [ub]
@@ -554,13 +567,13 @@ parseBlackBoxE n context =
             id2E <- convertExprToAigerExpr id2
             pure $ Concat [id1E, id2E]
           "\"Clash.Aiger.Base.split#\"" -> do
-            -- nat0 <- getNatLit 0
             id1 <- getExpr 1
             id1E <- convertExprToAigerExpr id1
             pure $ id1E
           "\"Clash.Aiger.Base.as\"" -> do
             id0 <- getExpr 3
             convertExprToAigerExpr id0
+          -- Integer extract to datatype
           "\"Clash.Sized.Internal.BitVector.fromInteger##\"" -> do
             n1 <- getExpr 1
             n1E <- convertExprToAigerExpr n1
@@ -580,6 +593,7 @@ parseBlackBoxE n context =
             n1 <- getExpr 1
             n1E <- convertExprToAigerExpr n1
             pure $ LastRange 0 sz n1E
+          -- Errors are unsigned
           "\"Clash.XException.errorX\"" -> do
             ub <- mapM (\_ -> undefinedBit) [0 .. resultSize - 1]
             pure $ BitRange ub
@@ -758,64 +772,54 @@ genAIGER _ _ _ _ _ c = do
  where
   cname = componentName c
 
-componentToState :: Component -> AigerM ()
-componentToState c = do
-  let decls = declarations c
-  saveInputs c
-  _ <- mapM parseDeclaration $ decls
-  saveAnds
-  saveOutputs c
-
 componentToAiger :: Component -> AigerM Doc
 componentToAiger c = do
+  -- save the declarations to the intermediate state
   componentToState c
-
-  -- traceM ""
-  -- traceState
   -- The graph has been parsed and now we generate the file from the aigerM State
   numInputs <- getNumInputs
   numOutputs <- getNumOutputs
   numAndGates <- getNumAndGates
   mInd <- getMaxIndex
-  let header =
-        pretty
-          ( "aag "
-              <> show (mInd - 1)
-              <> " "
-              <> show numInputs
-              <> " "
-              <> show numLatches
-              <> " "
-              <> show numOutputs
-              <> " "
-              <> show numAndGates
-          )
 
-  header
+  (header (mInd - 1) numInputs numLatches numOutputs numAndGates)
     <> writeInputs
     <> writeOutputs
     <> writeAnds
     <> symbolTable
     <> commentBlock Nothing
  where
-  numLatches = 0 :: Int -- TODO
+  numLatches = 0 :: Int
   symbolTable = emptyDoc
   commentBlock :: Maybe String -> AigerM Doc
   commentBlock cmmt = case cmmt of
     Just cmt -> pretty "c" <> line <> pretty cmt
     Nothing -> emptyDoc
+  header maxI inp latch out and =
+    pretty
+      ( "aag "
+          <> show maxI
+          <> " "
+          <> show inp
+          <> " "
+          <> show latch
+          <> " "
+          <> show out
+          <> " "
+          <> show and
+      )
 
-traceState :: AigerM ()
-traceState = do
-  ass <- getAssignments
-  traceM "assignments"
-  traceM (unlines $ map (\(i, a) -> show i ++ " = " ++ show a) $ Map.assocs ass)
-  traceM "End trace"
-  pure ()
+-- Saving Declarations to intermediate state
+componentToState :: Component -> AigerM ()
+componentToState c = do
+  let decls = declarations c
+  inputsToState c
+  _ <- mapM parseDeclaration $ decls
+  solveAndIndeces
+  solveOutputIndeces c
 
--- Saving netlist to state
-saveInputs :: Component -> AigerM ()
-saveInputs c = do
+inputsToState :: Component -> AigerM ()
+inputsToState c = do
   let i = inputs c
   _ <- mapM saveInput i
   pure ()
@@ -832,8 +836,8 @@ saveInputs c = do
       addInputNode (InputNode i)
       pure i
 
-saveOutputs :: Component -> AigerM ()
-saveOutputs c = do
+solveOutputIndeces :: Component -> AigerM ()
+solveOutputIndeces c = do
   let o = outputs c
   _ <- mapM saveOutput o
   pure ()
@@ -850,8 +854,8 @@ saveOutputs c = do
     addON i = do
       addOutputNode (OutputNode i)
 
-saveAnds :: AigerM ()
-saveAnds = do
+solveAndIndeces :: AigerM ()
+solveAndIndeces = do
   ands <- getUnsolvedAndNodes
   _ <- mapM go ands
   pure ()
@@ -867,7 +871,9 @@ saveAnds = do
         `orElse` error
           ("OutofBounds with getIndex, " ++ show ap ++ " with indeces: " ++ show indeces)
 
--- Writing state
+-- ###################
+-- ## WRITING STATE ##
+-- ###################
 
 writeOutput :: OutputNode -> AigerM Doc
 writeOutput (OutputNode ref) = pretty $ toInt ref
