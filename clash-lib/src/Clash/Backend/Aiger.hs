@@ -81,11 +81,6 @@ complement (AigerIndex i b) = AigerIndex i (not b)
 instance Show AigerIndex where
   show ai = show $ toInteger ai
 
-data AigerPointer = Pointer Text deriving (Ord, Eq)
-
-instance Show AigerPointer where
-  show (Pointer i) = show i
-
 data InputNode = InputNode AigerIndex
 data OutputNode = OutputNode AigerIndex
 data LatchNode = LatchNode AigerIndex AigerIndex
@@ -100,7 +95,10 @@ instance Show LatchNode where
 instance Show AndNode where
   show (AndNode ref left right) = (show ref <> " " <> show left <> " " <> show right)
 
-data UnsolvedAndNode = UnsolvedAndNode AigerIndex AigerExpr AigerExpr
+data AigerPointer = Pointer Text deriving (Ord, Eq)
+
+instance Show AigerPointer where
+  show (Pointer i) = show i
 
 data AigerExpr
   = Id AigerPointer
@@ -112,6 +110,8 @@ data AigerExpr
   | Indeces [AigerIndex]
   | Empty
   deriving (Show)
+
+data UnsolvedAndNode = UnsolvedAndNode AigerIndex AigerExpr AigerExpr
 
 data AigerState = AigerState
   { _maxIndex :: Integer
@@ -125,7 +125,6 @@ data AigerState = AigerState
 
 type AigerM = Ap (State AigerState)
 
--- Needed Boilerplate code for state and backend stuff
 makeLenses ''AigerState
 
 instance HasIdentifierSet AigerState where
@@ -179,12 +178,9 @@ addUnsolvedAndNodes n = do
   ns <- getUnsolvedAndNodes
   Ap $ unsolvedAndNodes .= n : ns
 
-getMaxIndex :: AigerM Integer
-getMaxIndex = Ap $ use maxIndex
-
 getNewIndex :: AigerM AigerIndex
 getNewIndex = do
-  i <- getMaxIndex
+  i <- Ap $ use maxIndex
   Ap $ maxIndex += 1
   pure (AigerIndex i False)
 
@@ -216,7 +212,7 @@ getAigerExpr ap = do
 -- ####################
 
 stateToAiger :: AigerM Doc
-stateToAiger =
+stateToAiger = do
   writeHeader
     <> writeInputs
     <> writeLatches
@@ -239,23 +235,21 @@ stateToAiger =
 
   writeHeader :: AigerM Doc
   writeHeader = do
-    mInd <- getMaxIndex
-    numInputs <- length <$> getInputNodes
-    numLatches <- length <$> getLatchNodes
-    numOutputs <- length <$> getOutputNodes
-    numAndGates <- length <$> getAndNodes
-    pretty
-      ( "aag "
-          <> show (mInd - 1)
-          <> " "
-          <> show numInputs
-          <> " "
-          <> show numLatches
-          <> " "
-          <> show numOutputs
-          <> " "
-          <> show numAndGates
-      )
+    numI <- length <$> getInputNodes
+    numL <- length <$> getLatchNodes
+    numO <- length <$> getOutputNodes
+    numA <- length <$> getAndNodes
+    pretty $
+      "aag "
+        <> show (numI + numL + numA - 1)
+        <> " "
+        <> show numI
+        <> " "
+        <> show numL
+        <> " "
+        <> show numO
+        <> " "
+        <> show numA
 
   writeInputs :: AigerM (Doc)
   writeInputs = do
@@ -801,7 +795,8 @@ solveAndIndeces = do
   getIndex ap i = do
     indeces <- getIndeces ap
     pure $
-      indeces !? i
+      indeces
+        !? i
         `orElse` error
           ("OutofBounds with getIndex, " ++ show ap ++ " with indeces: " ++ show indeces)
 
