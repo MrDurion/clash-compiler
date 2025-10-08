@@ -15,7 +15,7 @@ import Data.Text (Text)
 import Data.Tuple.Extra (fst3)
 import GHC.Data.Maybe (orElse)
 import GHC.Num (integerToInt)
-import Prelude hiding (and, lookup, or)
+import Prelude hiding (and, lookup, or, toInteger)
 
 import qualified Data.Map as Map
 import qualified Data.Text as TextS
@@ -71,33 +71,36 @@ type BUsage = Clash.Backend.Usage
 -- ### DATA DECLS ###
 -- ##################
 
-data AigerIndex = AigerIndex Int Bool
-toInt :: AigerIndex -> Int
-toInt (AigerIndex i b) = (i * 2) + if b then 1 else 0
+data AigerIndex = AigerIndex Integer Bool
+toInteger :: AigerIndex -> Integer
+toInteger (AigerIndex i b) = (i * 2) + if b then 1 else 0
 
 complement :: AigerIndex -> AigerIndex
 complement (AigerIndex i b) = AigerIndex i (not b)
 
 instance Show AigerIndex where
-  show ai = show $ toInt ai
-
-instance Eq AigerIndex where
-  (==) a b = (toInt a) == (toInt b)
-
-instance Ord AigerIndex where
-  (<=) a b = (toInt a) <= (toInt b)
+  show ai = show $ toInteger ai
 
 data AigerPointer = Pointer Text deriving (Ord, Eq)
 
 instance Show AigerPointer where
   show (Pointer i) = show i
 
-data InputNode = InputNode AigerIndex deriving (Show)
-data OutputNode = OutputNode AigerIndex deriving (Show)
-data LatchNode = LatchNode AigerIndex AigerIndex deriving (Show)
-data AndNode = AndNode AigerIndex AigerIndex AigerIndex deriving (Show)
+data InputNode = InputNode AigerIndex
+data OutputNode = OutputNode AigerIndex
+data LatchNode = LatchNode AigerIndex AigerIndex
+data AndNode = AndNode AigerIndex AigerIndex AigerIndex
+
+instance Show InputNode where
+  show (InputNode ref) = (show ref)
+instance Show OutputNode where
+  show (OutputNode ref) = (show ref)
+instance Show LatchNode where
+  show (LatchNode ref input) = (show ref <> " " <> show input)
+instance Show AndNode where
+  show (AndNode ref left right) = (show ref <> " " <> show left <> " " <> show right)
+
 data UnsolvedAndNode = UnsolvedAndNode AigerIndex AigerExpr AigerExpr
-  deriving (Show)
 
 data AigerExpr
   = Id AigerPointer
@@ -111,13 +114,13 @@ data AigerExpr
   deriving (Show)
 
 data AigerState = AigerState
-  { _maxIndex :: Int
+  { _maxIndex :: Integer
   , _inputNodes :: [InputNode]
   , _outputNodes :: [OutputNode]
   , _latchNodes :: [LatchNode]
   , _andNodes :: [AndNode]
   , _unsolvedAndNodes :: [UnsolvedAndNode]
-  , _aigerExpressions :: Map.Map AigerPointer AigerExpr
+  , _aigerComponent :: Map.Map AigerPointer AigerExpr
   }
 
 type AigerM = Ap (State AigerState)
@@ -176,7 +179,7 @@ addUnsolvedAndNodes n = do
   ns <- getUnsolvedAndNodes
   Ap $ unsolvedAndNodes .= n : ns
 
-getMaxIndex :: AigerM Int
+getMaxIndex :: AigerM Integer
 getMaxIndex = Ap $ use maxIndex
 
 getNewIndex :: AigerM AigerIndex
@@ -187,13 +190,13 @@ getNewIndex = do
 
 getAssignments :: AigerM (Map.Map AigerPointer AigerExpr)
 getAssignments = do
-  Ap $ use aigerExpressions
+  Ap $ use aigerComponent
 
 addAssignment :: AigerPointer -> AigerExpr -> AigerM ()
 addAssignment ap aa = do
   assignm <- getAssignments
   let newass = Map.insert ap aa assignm
-  Ap $ aigerExpressions .= newass
+  Ap $ aigerComponent .= newass
   pure ()
 
 getAigerExpr :: AigerPointer -> AigerM AigerExpr
@@ -230,9 +233,9 @@ stateToAiger =
   commentBlock :: AigerM Doc
   commentBlock = emptyDoc
 
-  createLinesOrEmpty :: (a -> AigerM Doc) -> [a] -> AigerM Doc
-  createLinesOrEmpty _ [] = emptyDoc
-  createLinesOrEmpty app i = (line <> (vcat $ mapM app i))
+  createLinesOrEmpty :: (Show a) => [a] -> AigerM Doc
+  createLinesOrEmpty [] = emptyDoc
+  createLinesOrEmpty i = (line <> (vcat $ mapM (pretty . show) i))
 
   writeHeader :: AigerM Doc
   writeHeader = do
@@ -254,37 +257,25 @@ stateToAiger =
           <> show numAndGates
       )
 
-  writeInputs :: AigerM Doc
+  writeInputs :: AigerM (Doc)
   writeInputs = do
     i <- getInputNodes
-    createLinesOrEmpty writeInput i
-   where
-    writeInput :: InputNode -> AigerM Doc
-    writeInput (InputNode i) = pretty (show i)
+    createLinesOrEmpty i
 
   writeLatches :: AigerM (Doc)
   writeLatches = do
     i <- getLatchNodes
-    createLinesOrEmpty writeLatch i
-   where
-    writeLatch :: LatchNode -> AigerM Doc
-    writeLatch (LatchNode ref input) = pretty (show ref <> " " <> show input)
+    createLinesOrEmpty i
 
   writeOutputs :: AigerM (Doc)
   writeOutputs = do
     i <- getOutputNodes
-    createLinesOrEmpty writeOutput i
-   where
-    writeOutput :: OutputNode -> AigerM Doc
-    writeOutput (OutputNode ref) = pretty (show ref)
+    createLinesOrEmpty i
 
   writeAnds :: AigerM (Doc)
   writeAnds = do
     i <- getAndNodes
-    createLinesOrEmpty writeAnd i
-   where
-    writeAnd :: AndNode -> AigerM Doc
-    writeAnd (AndNode ref l r) = pretty (show ref <> " " <> show l <> " " <> show r)
+    createLinesOrEmpty i
 
 undefinedBit :: AigerM AigerIndex
 undefinedBit = do
@@ -302,7 +293,7 @@ instance Backend AigerState where
       , _outputNodes = []
       , _andNodes = []
       , _unsolvedAndNodes = []
-      , _aigerExpressions = Map.insert (Pointer $ TextS.pack "__VOID__") Empty mempty
+      , _aigerComponent = Map.insert (Pointer $ TextS.pack "__VOID__") Empty mempty
       }
 
   -- \| What HDL is the backend generating
