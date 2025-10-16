@@ -33,7 +33,7 @@ import Clash.Backend (
   emptyDomainMap,
   primsRoot,
  )
-import Clash.Debug (trace)
+import Clash.Debug (trace, traceM)
 import Clash.Driver.Types (ClashOpts)
 import Clash.Netlist.BlackBox.Types (HdlSyn)
 import Clash.Netlist.Id (toText)
@@ -108,7 +108,6 @@ data AigerExpr
   | And AigerIndex
   | Complement AigerExpr
   | Indeces [AigerIndex]
-  | Empty
   deriving (Show)
 
 data UnsolvedAndNode = UnsolvedAndNode AigerIndex AigerExpr AigerExpr
@@ -287,7 +286,8 @@ instance Backend AigerState where
       , _outputNodes = []
       , _andNodes = []
       , _unsolvedAndNodes = []
-      , _aigerComponent = Map.insert (Pointer $ TextS.pack "__VOID__") Empty mempty
+      , _aigerComponent =
+          Map.insert (Pointer $ TextS.pack "__VOID__") (Indeces []) mempty
       }
 
   -- \| What HDL is the backend generating
@@ -695,7 +695,7 @@ convertExprToAigerExpr (BlackBoxE name _ _ _ _ context _) = parseBlackBoxE name 
 -- (Recursive) skip
 convertExprToAigerExpr (ToBv _ _ e1) = convertExprToAigerExpr e1
 convertExprToAigerExpr (FromBv _ _ e1) = convertExprToAigerExpr e1
-convertExprToAigerExpr (Noop) = pure Empty
+convertExprToAigerExpr (Noop) = pure (Indeces [])
 convertExprToAigerExpr e = error ("TODO found " ++ show e)
 
 parseBlackBoxE :: Text -> BlackBoxContext -> AigerM AigerExpr
@@ -835,4 +835,3 @@ getIndeces (Complement i1) = do
   aigerIndeces <- getIndeces i1
   pure $ map complement aigerIndeces
 getIndeces (Indeces bs) = pure bs
-getIndeces Empty = pure []
